@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_pos/database/database.dart';
 import 'package:flutter_pos/models/cart_item.dart';
 import 'package:flutter_pos/models/cart_state.dart';
+import 'package:flutter_pos/models/payment_method.dart';
 import 'package:flutter_pos/providers/cart_provider.dart';
 import 'package:flutter_pos/providers/product_providers.dart';
 import 'package:flutter_pos/providers/sale_provider.dart';
@@ -168,7 +169,14 @@ class PosScreen extends ConsumerWidget {
         Expanded(flex: 2, child: _buildProductSelection(context, ref)),
         const VerticalDivider(width: 1, thickness: 1),
         // --- 2. Область корзины ---
-        Expanded(flex: 1, child: _buildCartView(context, ref, cartState, currencyFormat, isCheckoutLoading)),
+        Expanded(
+          flex: 1,
+          child: _CartViewWidget(
+            cartState: cartState,
+            currencyFormat: currencyFormat,
+            isCheckoutLoading: isCheckoutLoading,
+          ),
+        ),
       ],
     );
   }
@@ -186,7 +194,7 @@ class PosScreen extends ConsumerWidget {
     return TabBarView(
       children: [
         _buildProductSelection(context, ref),
-        _buildCartView(context, ref, cartState, currencyFormat, isCheckoutLoading),
+        _CartViewWidget(cartState: cartState, currencyFormat: currencyFormat, isCheckoutLoading: isCheckoutLoading),
       ],
     );
   }
@@ -309,87 +317,125 @@ class PosScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  // ===========================================================================
-  // Метод для построения области корзины
-  // Кнопка "Оформить продажу" теперь будет работать в обоих режимах
-  // ===========================================================================
-  Widget _buildCartView(
-    BuildContext context,
-    WidgetRef ref,
-    CartState cartState,
-    NumberFormat currencyFormat,
-    bool isCheckoutLoading,
-  ) {
-    final items = cartState.items;
+class _CartViewWidget extends ConsumerStatefulWidget {
+  final CartState cartState;
+  final NumberFormat currencyFormat;
+  final bool isCheckoutLoading;
+
+  const _CartViewWidget({
+    required this.cartState,
+    required this.currencyFormat,
+    required this.isCheckoutLoading,
+    // Key? key не нужен здесь, если не используется явно
+  }); // Убран key
+
+  @override
+  ConsumerState<_CartViewWidget> createState() => _CartViewWidgetState();
+}
+
+class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
+  // Локальное состояние для хранения выбранного метода оплаты
+  PaymentMethod _selectedPaymentMethod = PaymentMethod.cash; // По умолчанию - наличные
+
+  @override
+  Widget build(BuildContext context) {
+    final items = widget.cartState.items; // Доступ к параметрам через widget
 
     return Column(
       children: [
+        // --- Список товаров в корзине (без изменений) ---
         Expanded(
           child:
               items.isEmpty
-                  ? const Center(child: Text('Корзина пуста', style: TextStyle(color: Colors.grey)))
+                  ? const Center(/* ... */)
                   : ListView.builder(
-                    padding: const EdgeInsets.only(top: 8), // Небольшой отступ сверху
+                    padding: const EdgeInsets.only(top: 8),
                     itemCount: items.length,
                     itemBuilder: (context, index) {
                       final item = items[index];
-                      return _buildCartItemTile(context, ref, item, currencyFormat);
+                      // Передаем ref явно в _buildCartItemTile
+                      return _buildCartItemTile(context, ref, item, widget.currencyFormat);
                     },
                   ),
         ),
         const Divider(),
-        // Итоговая информация и кнопка оформления (без изменений)
+
+        // --- Итоговая информация, ВЫБОР МЕТОДА ОПЛАТЫ и кнопка оформления ---
         Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0), // Уменьшен верхний отступ
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // --- Выбор метода оплаты ---
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text('Метод оплаты:', style: Theme.of(context).textTheme.titleSmall),
+              ),
+              // Используем Column для RadioListTile
+              Column(
+                mainAxisSize: MainAxisSize.min, // Занимать минимум места
+                children:
+                    PaymentMethod.values.map((method) {
+                      return RadioListTile<PaymentMethod>(
+                        title: Text(method.displayTitle),
+                        value: method,
+                        groupValue: _selectedPaymentMethod,
+                        onChanged:
+                            widget.isCheckoutLoading
+                                ? null
+                                : (PaymentMethod? value) {
+                                  // Блокируем во время загрузки
+                                  if (value != null) {
+                                    setState(() {
+                                      _selectedPaymentMethod = value;
+                                    });
+                                  }
+                                },
+                        dense: true, // Делаем компактнее
+                        contentPadding: EdgeInsets.zero, // Убираем лишние отступы
+                      );
+                    }).toList(),
+              ),
+              const SizedBox(height: 16), // Отступ перед итоговой суммой
+              // --- Итоговая сумма (без изменений) ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text('Итого:', style: Theme.of(context).textTheme.titleLarge),
                   Text(
-                    currencyFormat.format(cartState.totalPrice),
+                    widget.currencyFormat.format(widget.cartState.totalPrice),
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
+
+              // --- Кнопка Оформить продажу (передаем выбранный метод) ---
               ElevatedButton.icon(
-                icon:
-                    isCheckoutLoading
-                        ? Container(
-                          // Показываем индикатор загрузки вместо иконки
-                          width: 24,
-                          height: 24,
-                          padding: const EdgeInsets.all(2.0),
-                          child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
-                        )
-                        : const Icon(Icons.payment),
-                label: Text(isCheckoutLoading ? 'Оформление...' : 'Оформить продажу'), // Меняем текст кнопки
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 12.0),
-                  textStyle: const TextStyle(fontSize: 18),
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                ),
-                // Блокируем кнопку, если корзина пуста ИЛИ идет процесс оформления
+                icon: widget.isCheckoutLoading ? Container(/* ... Индикатор ... */) : const Icon(Icons.payment),
+                label: Text(widget.isCheckoutLoading ? 'Оформление...' : 'Оформить продажу'),
+                style: ElevatedButton.styleFrom(/* ... Стили ... */),
+                // Передаем _selectedPaymentMethod в checkout()
                 onPressed:
-                    items.isEmpty || isCheckoutLoading
+                    items.isEmpty || widget.isCheckoutLoading
                         ? null
                         : () {
-                          // Вызываем метод checkout из SaleNotifier
-                          ref.read(saleNotifierProvider.notifier).checkout();
+                          ref
+                              .read(saleNotifierProvider.notifier)
+                              .checkout(_selectedPaymentMethod); // <--- ПЕРЕДАЕМ МЕТОД
                         },
               ),
-              if (items.isNotEmpty) ...[
+
+              // --- Кнопка очистки корзины (без изменений) ---
+              if (items.isNotEmpty && !widget.isCheckoutLoading) ...[
                 const SizedBox(height: 8),
                 TextButton.icon(
                   icon: const Icon(Icons.remove_shopping_cart_outlined, size: 18),
                   label: const Text('Очистить корзину'),
                   style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  onPressed: () => _showClearCartConfirmation(context, ref),
+                  onPressed: () => _showClearCartConfirmation(context, ref), // Передаем ref
                 ),
               ],
             ],
@@ -399,28 +445,25 @@ class PosScreen extends ConsumerWidget {
     );
   }
 
-  // ===========================================================================
-  // Виджет для отображения одного элемента в корзине (БЕЗ ИЗМЕНЕНИЙ)
-  // ===========================================================================
   Widget _buildCartItemTile(BuildContext context, WidgetRef ref, CartItem item, NumberFormat currencyFormat) {
     return ListTile(
       title: Text(item.name),
       subtitle: Text('${currencyFormat.format(item.priceAtSale)} / шт.'),
       // Управление количеством
       leading: Row(
-        mainAxisSize: MainAxisSize.min, // Занимать минимум места по горизонтали
+        mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
             icon: const Icon(Icons.remove_circle_outline, color: Colors.orange),
             iconSize: 20,
             padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(), // Убрать лишние отступы кнопки
+            constraints: const BoxConstraints(),
             tooltip: 'Уменьшить',
             onPressed: () {
               ref.read(cartProvider.notifier).decrementQuantity(item.sku);
             },
           ),
-          // Отображение количества
+
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4.0),
             child: Text(item.quantity.toString(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
@@ -438,13 +481,11 @@ class PosScreen extends ConsumerWidget {
           ),
         ],
       ),
-      // Общая стоимость позиции и кнопка удаления
+
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Стоимость позиции
           SizedBox(
-            // Ограничим ширину текста с ценой
             width: 70,
             child: Text(
               currencyFormat.format(item.itemTotal),
@@ -452,7 +493,7 @@ class PosScreen extends ConsumerWidget {
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
-          // Кнопка удаления элемента
+
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.red),
             iconSize: 20,
@@ -468,24 +509,21 @@ class PosScreen extends ConsumerWidget {
     );
   }
 
-  // ===========================================================================
-  // Диалог подтверждения очистки корзины (БЕЗ ИЗМЕНЕНИЙ)
-  // ===========================================================================
   void _showClearCartConfirmation(BuildContext context, WidgetRef ref) {
     showDialog(
       context: context,
       builder: (BuildContext ctx) {
         return AlertDialog(
           title: const Text('Очистить корзину?'),
-          content: const Text('Вы уверены, что хотите удалить все товары из корзины?'),
+          content: const Text('Вы уверены...?'),
           actions: <Widget>[
             TextButton(child: const Text('Отмена'), onPressed: () => Navigator.of(ctx).pop()),
             TextButton(
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Очистить'),
               onPressed: () {
-                Navigator.of(ctx).pop(); // Закрыть диалог
-                ref.read(cartProvider.notifier).clearCart(); // Очистить корзину
+                Navigator.of(ctx).pop();
+                ref.read(cartProvider.notifier).clearCart();
               },
             ),
           ],

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_pos/models/cart_item.dart';
+import 'package:flutter_pos/models/payment_method.dart';
 import 'package:flutter_pos/models/sale.dart';
 import 'package:flutter_pos/models/sale_item.dart';
 import 'package:path_provider/path_provider.dart';
@@ -17,7 +18,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   Stream<List<Product>> watchAllProducts() => select(products).watch();
   Future<Product?> getProductById(int id) => (select(products)..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
@@ -46,14 +47,12 @@ class AppDatabase extends _$AppDatabase {
     }
   }
 
-  Future<int> createSaleTransaction(List<CartItem> cartItems, double totalAmount) async {
+  Future<int> createSaleTransaction(List<CartItem> cartItems, double totalAmount, PaymentMethod paymentMethod) async {
     if (cartItems.isEmpty) {
       throw Exception("Cannot create sale with empty cart.");
     }
 
     return transaction(() async {
-      // 1. Проверяем наличие достаточного количества *перед* любыми записями
-      //    (Хотя _updateStockInTransaction тоже проверяет, лучше сделать это заранее)
       for (final item in cartItems) {
         final productInfo =
             await (select(products, distinct: true)
@@ -71,16 +70,13 @@ class AppDatabase extends _$AppDatabase {
         }
       }
 
-      // 2. Создаем запись о продаже (Sale)
-      final saleCompanion = SalesCompanion.insert(totalAmount: totalAmount);
-      final newSale = await into(sales).insertReturning(saleCompanion); // insertReturning вернет созданный объект Sale
+      final saleCompanion = SalesCompanion.insert(totalAmount: totalAmount, paymentMethod: Value(paymentMethod.name));
+      final newSale = await into(sales).insertReturning(saleCompanion);
 
-      // 3. Создаем записи для каждого товара в продаже (SaleItem)
-      //    и одновременно обновляем остатки
       for (final item in cartItems) {
         final saleItemCompanion = SaleItemsCompanion.insert(
-          saleId: newSale.id, // Связываем с созданной продажей
-          productId: item.productId, // Value() для nullable reference
+          saleId: newSale.id,
+          productId: item.productId,
           quantity: item.quantity,
           priceAtSale: item.priceAtSale,
           productSku: item.sku,
@@ -88,18 +84,13 @@ class AppDatabase extends _$AppDatabase {
         );
         await into(saleItems).insert(saleItemCompanion);
 
-        // 4. Обновляем остаток товара (уменьшаем количество)
-        //    Вызываем метод, который работает внутри транзакции
-        await _updateStockInTransaction(item.productId, -item.quantity); // Отрицательное значение для уменьшения
+        await _updateStockInTransaction(item.productId, -item.quantity);
       }
 
-      // Если все прошло успешно, транзакция автоматически завершится (commit)
-      // и вернет ID созданной продажи
       return newSale.id;
     });
   }
 
-  // (Опционально) Метод для получения истории продаж (пример)
   Future<List<Sale>> getSalesHistory({int limit = 50, int offset = 0}) async {
     return (select(sales)
           ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)])
@@ -107,7 +98,6 @@ class AppDatabase extends _$AppDatabase {
         .get();
   }
 
-  // (Опционально) Метод для получения деталей конкретной продажи
   Future<List<SaleItem>> getSaleItems(int saleId) async {
     return (select(saleItems)..where((tbl) => tbl.saleId.equals(saleId))).get();
   }

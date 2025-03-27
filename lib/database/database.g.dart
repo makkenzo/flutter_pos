@@ -575,8 +575,25 @@ class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
     type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _paymentMethodMeta = const VerificationMeta(
+    'paymentMethod',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, createdAt, totalAmount];
+  late final GeneratedColumn<String> paymentMethod = GeneratedColumn<String>(
+    'payment_method',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: Constant(PaymentMethod.cash.name),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    createdAt,
+    totalAmount,
+    paymentMethod,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -609,6 +626,15 @@ class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
     } else if (isInserting) {
       context.missing(_totalAmountMeta);
     }
+    if (data.containsKey('payment_method')) {
+      context.handle(
+        _paymentMethodMeta,
+        paymentMethod.isAcceptableOrUnknown(
+          data['payment_method']!,
+          _paymentMethodMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -633,6 +659,11 @@ class $SalesTable extends Sales with TableInfo<$SalesTable, Sale> {
             DriftSqlType.double,
             data['${effectivePrefix}total_amount'],
           )!,
+      paymentMethod:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}payment_method'],
+          )!,
     );
   }
 
@@ -646,10 +677,12 @@ class Sale extends DataClass implements Insertable<Sale> {
   final int id;
   final DateTime createdAt;
   final double totalAmount;
+  final String paymentMethod;
   const Sale({
     required this.id,
     required this.createdAt,
     required this.totalAmount,
+    required this.paymentMethod,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -657,6 +690,7 @@ class Sale extends DataClass implements Insertable<Sale> {
     map['id'] = Variable<int>(id);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['total_amount'] = Variable<double>(totalAmount);
+    map['payment_method'] = Variable<String>(paymentMethod);
     return map;
   }
 
@@ -665,6 +699,7 @@ class Sale extends DataClass implements Insertable<Sale> {
       id: Value(id),
       createdAt: Value(createdAt),
       totalAmount: Value(totalAmount),
+      paymentMethod: Value(paymentMethod),
     );
   }
 
@@ -677,6 +712,7 @@ class Sale extends DataClass implements Insertable<Sale> {
       id: serializer.fromJson<int>(json['id']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       totalAmount: serializer.fromJson<double>(json['totalAmount']),
+      paymentMethod: serializer.fromJson<String>(json['paymentMethod']),
     );
   }
   @override
@@ -686,13 +722,20 @@ class Sale extends DataClass implements Insertable<Sale> {
       'id': serializer.toJson<int>(id),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'totalAmount': serializer.toJson<double>(totalAmount),
+      'paymentMethod': serializer.toJson<String>(paymentMethod),
     };
   }
 
-  Sale copyWith({int? id, DateTime? createdAt, double? totalAmount}) => Sale(
+  Sale copyWith({
+    int? id,
+    DateTime? createdAt,
+    double? totalAmount,
+    String? paymentMethod,
+  }) => Sale(
     id: id ?? this.id,
     createdAt: createdAt ?? this.createdAt,
     totalAmount: totalAmount ?? this.totalAmount,
+    paymentMethod: paymentMethod ?? this.paymentMethod,
   );
   Sale copyWithCompanion(SalesCompanion data) {
     return Sale(
@@ -700,6 +743,10 @@ class Sale extends DataClass implements Insertable<Sale> {
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       totalAmount:
           data.totalAmount.present ? data.totalAmount.value : this.totalAmount,
+      paymentMethod:
+          data.paymentMethod.present
+              ? data.paymentMethod.value
+              : this.paymentMethod,
     );
   }
 
@@ -708,45 +755,52 @@ class Sale extends DataClass implements Insertable<Sale> {
     return (StringBuffer('Sale(')
           ..write('id: $id, ')
           ..write('createdAt: $createdAt, ')
-          ..write('totalAmount: $totalAmount')
+          ..write('totalAmount: $totalAmount, ')
+          ..write('paymentMethod: $paymentMethod')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, createdAt, totalAmount);
+  int get hashCode => Object.hash(id, createdAt, totalAmount, paymentMethod);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is Sale &&
           other.id == this.id &&
           other.createdAt == this.createdAt &&
-          other.totalAmount == this.totalAmount);
+          other.totalAmount == this.totalAmount &&
+          other.paymentMethod == this.paymentMethod);
 }
 
 class SalesCompanion extends UpdateCompanion<Sale> {
   final Value<int> id;
   final Value<DateTime> createdAt;
   final Value<double> totalAmount;
+  final Value<String> paymentMethod;
   const SalesCompanion({
     this.id = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.totalAmount = const Value.absent(),
+    this.paymentMethod = const Value.absent(),
   });
   SalesCompanion.insert({
     this.id = const Value.absent(),
     this.createdAt = const Value.absent(),
     required double totalAmount,
+    this.paymentMethod = const Value.absent(),
   }) : totalAmount = Value(totalAmount);
   static Insertable<Sale> custom({
     Expression<int>? id,
     Expression<DateTime>? createdAt,
     Expression<double>? totalAmount,
+    Expression<String>? paymentMethod,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (createdAt != null) 'created_at': createdAt,
       if (totalAmount != null) 'total_amount': totalAmount,
+      if (paymentMethod != null) 'payment_method': paymentMethod,
     });
   }
 
@@ -754,11 +808,13 @@ class SalesCompanion extends UpdateCompanion<Sale> {
     Value<int>? id,
     Value<DateTime>? createdAt,
     Value<double>? totalAmount,
+    Value<String>? paymentMethod,
   }) {
     return SalesCompanion(
       id: id ?? this.id,
       createdAt: createdAt ?? this.createdAt,
       totalAmount: totalAmount ?? this.totalAmount,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
     );
   }
 
@@ -774,6 +830,9 @@ class SalesCompanion extends UpdateCompanion<Sale> {
     if (totalAmount.present) {
       map['total_amount'] = Variable<double>(totalAmount.value);
     }
+    if (paymentMethod.present) {
+      map['payment_method'] = Variable<String>(paymentMethod.value);
+    }
     return map;
   }
 
@@ -782,7 +841,8 @@ class SalesCompanion extends UpdateCompanion<Sale> {
     return (StringBuffer('SalesCompanion(')
           ..write('id: $id, ')
           ..write('createdAt: $createdAt, ')
-          ..write('totalAmount: $totalAmount')
+          ..write('totalAmount: $totalAmount, ')
+          ..write('paymentMethod: $paymentMethod')
           ..write(')'))
         .toString();
   }
@@ -1664,12 +1724,14 @@ typedef $$SalesTableCreateCompanionBuilder =
       Value<int> id,
       Value<DateTime> createdAt,
       required double totalAmount,
+      Value<String> paymentMethod,
     });
 typedef $$SalesTableUpdateCompanionBuilder =
     SalesCompanion Function({
       Value<int> id,
       Value<DateTime> createdAt,
       Value<double> totalAmount,
+      Value<String> paymentMethod,
     });
 
 final class $$SalesTableReferences
@@ -1715,6 +1777,11 @@ class $$SalesTableFilterComposer extends Composer<_$AppDatabase, $SalesTable> {
 
   ColumnFilters<double> get totalAmount => $composableBuilder(
     column: $table.totalAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get paymentMethod => $composableBuilder(
+    column: $table.paymentMethod,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1767,6 +1834,11 @@ class $$SalesTableOrderingComposer
     column: $table.totalAmount,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get paymentMethod => $composableBuilder(
+    column: $table.paymentMethod,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SalesTableAnnotationComposer
@@ -1786,6 +1858,11 @@ class $$SalesTableAnnotationComposer
 
   GeneratedColumn<double> get totalAmount => $composableBuilder(
     column: $table.totalAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get paymentMethod => $composableBuilder(
+    column: $table.paymentMethod,
     builder: (column) => column,
   );
 
@@ -1846,20 +1923,24 @@ class $$SalesTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<double> totalAmount = const Value.absent(),
+                Value<String> paymentMethod = const Value.absent(),
               }) => SalesCompanion(
                 id: id,
                 createdAt: createdAt,
                 totalAmount: totalAmount,
+                paymentMethod: paymentMethod,
               ),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 required double totalAmount,
+                Value<String> paymentMethod = const Value.absent(),
               }) => SalesCompanion.insert(
                 id: id,
                 createdAt: createdAt,
                 totalAmount: totalAmount,
+                paymentMethod: paymentMethod,
               ),
           withReferenceMapper:
               (p0) =>
