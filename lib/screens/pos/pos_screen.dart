@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_pos/database/database.dart';
+import 'package:flutter_pos/main.dart';
 import 'package:flutter_pos/models/cart_item.dart';
 import 'package:flutter_pos/models/cart_state.dart';
 import 'package:flutter_pos/models/payment_method.dart';
@@ -8,11 +9,11 @@ import 'package:flutter_pos/providers/product_providers.dart';
 import 'package:flutter_pos/providers/sale_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 class PosScreen extends ConsumerWidget {
   const PosScreen({super.key});
 
-  // Точка перелома для определения, какой layout использовать
   static const double _tabletBreakpoint = 600.0;
 
   @override
@@ -60,20 +61,8 @@ class PosScreen extends ConsumerWidget {
                 ),
                 body:
                     isTablet
-                        ? _buildTabletLayout(
-                          context,
-                          ref,
-                          cartState,
-                          currencyFormat,
-                          saleState.isLoading,
-                        ) // Широкий экран
-                        : _buildMobileLayout(
-                          context,
-                          ref,
-                          cartState,
-                          currencyFormat,
-                          saleState.isLoading,
-                        ), // Узкий экран (TabBarView)
+                        ? _buildTabletLayout(context, ref, cartState, currencyFormat, saleState.isLoading)
+                        : _buildMobileLayout(context, ref, cartState, currencyFormat, saleState.isLoading),
               );
             },
           ),
@@ -94,10 +83,7 @@ class PosScreen extends ConsumerWidget {
       IconButton(
         icon: const Icon(Icons.qr_code_scanner),
         tooltip: 'Сканировать штрих-код',
-        onPressed: () {
-          // TODO: Реализовать сканирование штрих-кода (Шаг 9)
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Сканер еще не реализован')));
-        },
+        onPressed: () => _showBarcodeScannerDialog(context, ref),
       ),
       if (isTablet)
         Center(
@@ -113,14 +99,12 @@ class PosScreen extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.only(right: 8.0),
           child: Badge(
-            // Виджет Badge для отображения количества
             label: Text(cartState.totalItemsCount.toString()),
             isLabelVisible: cartState.totalItemsCount > 0,
             child: IconButton(
               icon: const Icon(Icons.shopping_cart),
               tooltip: 'Перейти в корзину',
               onPressed: () {
-                // Переключаемся на вторую вкладку (Корзина)
                 final controller = DefaultTabController.of(tabContext);
                 controller.animateTo(1);
               },
@@ -130,31 +114,24 @@ class PosScreen extends ConsumerWidget {
     ];
   }
 
-  // ===========================================================================
-  // TabBar (только для мобильного вида)
-  // ===========================================================================
   PreferredSizeWidget _buildTabBar(BuildContext context, CartState cartState) {
     final currencyFormat = NumberFormat.currency(locale: 'ru_RU', symbol: '₸');
     return TabBar(
       tabs: [
         const Tab(icon: Icon(Icons.inventory_2_outlined), text: 'Товары'),
         Tab(
-          // Добавляем бейдж на иконку корзины
           icon: Badge(
             label: Text(cartState.totalItemsCount.toString()),
             isLabelVisible: cartState.totalItemsCount > 0,
             child: const Icon(Icons.shopping_cart_outlined),
           ),
-          // Показываем сумму на вкладке корзины
+
           text: 'Корзина (${currencyFormat.format(cartState.totalPrice)})',
         ),
       ],
     );
   }
 
-  // ===========================================================================
-  // Layout для широких экранов (планшет/ландшафт) - ИСПОЛЬЗУЕТ ROW
-  // ===========================================================================
   Widget _buildTabletLayout(
     BuildContext context,
     WidgetRef ref,
@@ -165,10 +142,9 @@ class PosScreen extends ConsumerWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // --- 1. Область выбора товаров ---
         Expanded(flex: 2, child: _buildProductSelection(context, ref)),
         const VerticalDivider(width: 1, thickness: 1),
-        // --- 2. Область корзины ---
+
         Expanded(
           flex: 1,
           child: _CartViewWidget(
@@ -181,9 +157,6 @@ class PosScreen extends ConsumerWidget {
     );
   }
 
-  // ===========================================================================
-  // Layout для узких экранов (телефон/портрет) - ИСПОЛЬЗУЕТ TABBARVIEW
-  // ===========================================================================
   Widget _buildMobileLayout(
     BuildContext context,
     WidgetRef ref,
@@ -199,9 +172,6 @@ class PosScreen extends ConsumerWidget {
     );
   }
 
-  // ===========================================================================
-  // Метод для построения области выбора товаров (БЕЗ ИЗМЕНЕНИЙ)
-  // ===========================================================================
   Widget _buildProductSelection(BuildContext context, WidgetRef ref) {
     final productListAsync = ref.watch(productListProvider);
 
@@ -249,9 +219,6 @@ class PosScreen extends ConsumerWidget {
     );
   }
 
-  // ===========================================================================
-  // Виджет для отображения одного товара в сетке
-  // ===========================================================================
   Widget _buildProductTile(BuildContext context, WidgetRef ref, Product product) {
     final currencyFormat = NumberFormat.currency(locale: 'ru_RU', symbol: '₸');
     bool inStock = product.quantity > 0;
@@ -268,7 +235,7 @@ class PosScreen extends ConsumerWidget {
                     SnackBar(
                       content: Text('"${product.name}" добавлен в корзину'),
                       duration: const Duration(seconds: 1),
-                      behavior: SnackBarBehavior.floating, // Улучшение для мобильных
+                      behavior: SnackBarBehavior.floating,
                       margin: const EdgeInsets.all(8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
@@ -317,6 +284,61 @@ class PosScreen extends ConsumerWidget {
       ),
     );
   }
+
+  Future<void> _processScannedBarcode(BuildContext context, WidgetRef ref, String barcodeValue) async {
+    if (barcodeValue.isEmpty) return;
+
+    final db = ref.read(databaseProvider);
+    final product = await db.getProductBySku(barcodeValue);
+
+    if (!context.mounted) return;
+
+    if (product != null) {
+      if (product.quantity > 0) {
+        ref.read(cartProvider.notifier).addItem(product);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('"${product.name}" добавлен в корзину'),
+            duration: const Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(8),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Товар "${product.name}" (${product.sku}) закончился на складе'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Товар со штрих-кодом "$barcodeValue" не найден'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showBarcodeScannerDialog(BuildContext context, WidgetRef ref) async {
+    final String? scannedValue = await showDialog<String?>(
+      context: context,
+      builder: (dialogContext) => const _BarcodeScannerDialog(),
+    );
+
+    if (scannedValue != null && scannedValue.isNotEmpty && context.mounted) {
+      await _processScannedBarcode(context, ref, scannedValue);
+    } else if (scannedValue == null && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Сканирование отменено'), duration: Duration(seconds: 2)));
+    }
+  }
 }
 
 class _CartViewWidget extends ConsumerStatefulWidget {
@@ -324,28 +346,21 @@ class _CartViewWidget extends ConsumerStatefulWidget {
   final NumberFormat currencyFormat;
   final bool isCheckoutLoading;
 
-  const _CartViewWidget({
-    required this.cartState,
-    required this.currencyFormat,
-    required this.isCheckoutLoading,
-    // Key? key не нужен здесь, если не используется явно
-  }); // Убран key
+  const _CartViewWidget({required this.cartState, required this.currencyFormat, required this.isCheckoutLoading});
 
   @override
   ConsumerState<_CartViewWidget> createState() => _CartViewWidgetState();
 }
 
 class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
-  // Локальное состояние для хранения выбранного метода оплаты
-  PaymentMethod _selectedPaymentMethod = PaymentMethod.cash; // По умолчанию - наличные
+  PaymentMethod _selectedPaymentMethod = PaymentMethod.cash;
 
   @override
   Widget build(BuildContext context) {
-    final items = widget.cartState.items; // Доступ к параметрам через widget
+    final items = widget.cartState.items;
 
     return Column(
       children: [
-        // --- Список товаров в корзине (без изменений) ---
         Expanded(
           child:
               items.isEmpty
@@ -355,27 +370,25 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
                     itemCount: items.length,
                     itemBuilder: (context, index) {
                       final item = items[index];
-                      // Передаем ref явно в _buildCartItemTile
+
                       return _buildCartItemTile(context, ref, item, widget.currencyFormat);
                     },
                   ),
         ),
         const Divider(),
 
-        // --- Итоговая информация, ВЫБОР МЕТОДА ОПЛАТЫ и кнопка оформления ---
         Padding(
-          padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0), // Уменьшен верхний отступ
+          padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // --- Выбор метода оплаты ---
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Text('Метод оплаты:', style: Theme.of(context).textTheme.titleSmall),
               ),
-              // Используем Column для RadioListTile
+
               Column(
-                mainAxisSize: MainAxisSize.min, // Занимать минимум места
+                mainAxisSize: MainAxisSize.min,
                 children:
                     PaymentMethod.values.map((method) {
                       return RadioListTile<PaymentMethod>(
@@ -386,20 +399,19 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
                             widget.isCheckoutLoading
                                 ? null
                                 : (PaymentMethod? value) {
-                                  // Блокируем во время загрузки
                                   if (value != null) {
                                     setState(() {
                                       _selectedPaymentMethod = value;
                                     });
                                   }
                                 },
-                        dense: true, // Делаем компактнее
-                        contentPadding: EdgeInsets.zero, // Убираем лишние отступы
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
                       );
                     }).toList(),
               ),
-              const SizedBox(height: 16), // Отступ перед итоговой суммой
-              // --- Итоговая сумма (без изменений) ---
+              const SizedBox(height: 16),
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -412,30 +424,26 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
               ),
               const SizedBox(height: 16),
 
-              // --- Кнопка Оформить продажу (передаем выбранный метод) ---
               ElevatedButton.icon(
                 icon: widget.isCheckoutLoading ? Container(/* ... Индикатор ... */) : const Icon(Icons.payment),
                 label: Text(widget.isCheckoutLoading ? 'Оформление...' : 'Оформить продажу'),
                 style: ElevatedButton.styleFrom(/* ... Стили ... */),
-                // Передаем _selectedPaymentMethod в checkout()
+
                 onPressed:
                     items.isEmpty || widget.isCheckoutLoading
                         ? null
                         : () {
-                          ref
-                              .read(saleNotifierProvider.notifier)
-                              .checkout(_selectedPaymentMethod); // <--- ПЕРЕДАЕМ МЕТОД
+                          ref.read(saleNotifierProvider.notifier).checkout(_selectedPaymentMethod);
                         },
               ),
 
-              // --- Кнопка очистки корзины (без изменений) ---
               if (items.isNotEmpty && !widget.isCheckoutLoading) ...[
                 const SizedBox(height: 8),
                 TextButton.icon(
                   icon: const Icon(Icons.remove_shopping_cart_outlined, size: 18),
                   label: const Text('Очистить корзину'),
                   style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  onPressed: () => _showClearCartConfirmation(context, ref), // Передаем ref
+                  onPressed: () => _showClearCartConfirmation(context, ref),
                 ),
               ],
             ],
@@ -449,7 +457,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
     return ListTile(
       title: Text(item.name),
       subtitle: Text('${currencyFormat.format(item.priceAtSale)} / шт.'),
-      // Управление количеством
+
       leading: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -476,7 +484,6 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             tooltip: 'Увеличить',
             onPressed: () {
               ref.read(cartProvider.notifier).incrementQuantity(item.sku);
-              // Важно: Здесь мы не проверяем остаток! Проверка будет при оформлении.
             },
           ),
         ],
@@ -530,5 +537,199 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
         );
       },
     );
+  }
+}
+
+class _BarcodeScannerDialog extends ConsumerStatefulWidget {
+  const _BarcodeScannerDialog({Key? key}) : super(key: key);
+
+  @override
+  ConsumerState<_BarcodeScannerDialog> createState() => _BarcodeScannerDialogState();
+}
+
+class _BarcodeScannerDialogState extends ConsumerState<_BarcodeScannerDialog> {
+  final MobileScannerController controller = MobileScannerController(facing: CameraFacing.back);
+  bool _isProcessing = false;
+  bool _isTorchOn = false;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scanWindowSize = MediaQuery.of(context).size.width * 0.6;
+    final scanWindow = Rect.fromCenter(
+      center: MediaQuery.of(context).size.center(Offset.zero),
+      width: scanWindowSize,
+      height: scanWindowSize,
+    );
+
+    return AlertDialog(
+      title: const Text('Сканировать штрих-код'),
+      contentPadding: EdgeInsets.zero,
+      insetPadding: const EdgeInsets.all(10),
+      content: SizedBox(
+        width: MediaQuery.of(context).size.width * 0.9,
+        height: MediaQuery.of(context).size.height * 0.6,
+        child: Stack(
+          children: [
+            MobileScanner(
+              controller: controller,
+              scanWindow: scanWindow,
+              onDetect: (capture) {
+                if (_isProcessing) return;
+
+                final List<Barcode> barcodes = capture.barcodes;
+                String? scannedValue;
+                for (final barcode in barcodes) {
+                  if (barcode.rawValue != null && barcode.rawValue!.isNotEmpty) {
+                    scannedValue = barcode.rawValue;
+                    break;
+                  }
+                }
+
+                if (scannedValue != null) {
+                  setState(() {
+                    _isProcessing = true;
+                  });
+                  print('Barcode found! $scannedValue');
+
+                  Navigator.of(context).pop(scannedValue);
+                } else {
+                  print('Detected barcode with empty value.');
+                }
+              },
+
+              errorBuilder: (context, error, child) {
+                print('Scanner Error: $error');
+
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      'Ошибка сканера:\n${error.toString()}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  ),
+                );
+              },
+            ),
+
+            CustomPaint(size: Size.infinite, painter: ScannerOverlayPainter(scanWindow: scanWindow)),
+
+            Positioned(
+              bottom: 20,
+              left: 20,
+              child: IconButton(
+                color: Colors.white,
+                iconSize: 32.0,
+                icon: Icon(_isTorchOn ? Icons.flash_on : Icons.flash_off),
+                tooltip: 'Фонарик',
+                onPressed: () async {
+                  try {
+                    await controller.toggleTorch();
+
+                    setState(() {
+                      _isTorchOn = !_isTorchOn;
+                    });
+                  } catch (e) {
+                    print("Failed to toggle torch: $e");
+                    if (mounted) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('Не удалось переключить фонарик: $e')));
+                    }
+                  }
+                },
+              ),
+            ),
+
+            Positioned(
+              bottom: 20,
+              right: 20,
+              child: IconButton(
+                color: Colors.white,
+                iconSize: 32.0,
+                icon: const Icon(Icons.cameraswitch),
+                tooltip: 'Сменить камеру',
+                onPressed: () async {
+                  try {
+                    await controller.switchCamera();
+                  } catch (e) {
+                    print("Failed to switch camera: $e");
+                    if (mounted) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('Не удалось сменить камеру: $e')));
+                    }
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [TextButton(child: const Text('Отмена'), onPressed: () => Navigator.of(context).pop())],
+    );
+  }
+}
+
+// ===========================================================================
+// (Опционально) Вспомогательный Painter для рамки сканирования
+// ===========================================================================
+class ScannerOverlayPainter extends CustomPainter {
+  final Rect scanWindow;
+  final double borderRadius;
+
+  ScannerOverlayPainter({required this.scanWindow, this.borderRadius = 12.0});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final backgroundPath = Path()..addRect(Rect.largest);
+    final cutoutPath =
+        Path()..addRRect(
+          RRect.fromRectAndCorners(
+            scanWindow,
+            topLeft: Radius.circular(borderRadius),
+            topRight: Radius.circular(borderRadius),
+            bottomLeft: Radius.circular(borderRadius),
+            bottomRight: Radius.circular(borderRadius),
+          ),
+        );
+
+    final backgroundPaint = Paint()..color = Colors.black.withOpacity(0.5);
+
+    final backgroundPathCutout = Path.combine(PathOperation.difference, backgroundPath, cutoutPath);
+    canvas.drawPath(backgroundPathCutout, backgroundPaint);
+
+    final borderPaint =
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.0;
+    canvas.drawRRect(
+      RRect.fromRectAndCorners(
+        scanWindow,
+        topLeft: Radius.circular(borderRadius),
+        topRight: Radius.circular(borderRadius),
+        bottomLeft: Radius.circular(borderRadius),
+        bottomRight: Radius.circular(borderRadius),
+      ),
+      borderPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return false;
   }
 }
