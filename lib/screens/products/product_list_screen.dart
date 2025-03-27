@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_pos/database/database.dart';
 import 'package:flutter_pos/screens/pos/pos_screen.dart';
 import 'package:flutter_pos/screens/products/product_form_screen.dart';
+import 'package:flutter_pos/screens/sales/sales_history_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/src/widgets/framework.dart';
@@ -20,12 +21,15 @@ class ProductListScreen extends ConsumerWidget {
         title: const Text('Товары'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'История продаж',
             onPressed: () {
-              Navigator.push(
-                // Используем push для перехода
-                context,
-                MaterialPageRoute(builder: (_) => const PosScreen()), // Переходим на PosScreen
-              );
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const SalesHistoryScreen()));
+            },
+          ),
+          IconButton(
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const PosScreen()));
             },
             icon: const Icon(Icons.point_of_sale),
           ),
@@ -57,11 +61,11 @@ class ProductListScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
       ),
       floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.add),
         tooltip: 'Добавить товар',
         onPressed: () {
           Navigator.push(context, MaterialPageRoute(builder: (_) => const ProductFormScreen()));
         },
+        child: const Icon(Icons.add),
       ),
     );
   }

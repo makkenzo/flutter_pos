@@ -101,6 +101,10 @@ class AppDatabase extends _$AppDatabase {
   Future<List<SaleItem>> getSaleItems(int saleId) async {
     return (select(saleItems)..where((tbl) => tbl.saleId.equals(saleId))).get();
   }
+
+  Future<Sale?> getSaleById(int saleId) async {
+    return (select(sales)..where((tbl) => tbl.id.equals(saleId))).getSingleOrNull();
+  }
 }
 
 LazyDatabase _openConnection() {
