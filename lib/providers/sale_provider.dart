@@ -1,50 +1,65 @@
-import 'package:flutter_pos/main.dart';
 import 'package:flutter_pos/models/payment_method.dart';
+import 'package:flutter_pos/providers/api_provider.dart';
+import 'package:flutter_pos/providers/auth_provider.dart';
 import 'package:flutter_pos/providers/cart_provider.dart';
+import 'package:flutter_pos/services/api_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final saleNotifierProvider = StateNotifierProvider<SaleNotifier, AsyncValue<int?>>((ref) {
+final saleNotifierProvider = StateNotifierProvider<SaleNotifier, AsyncValue<String?>>((ref) {
   return SaleNotifier(ref);
 });
 
-class SaleNotifier extends StateNotifier<AsyncValue<int?>> {
-  final Ref _ref; // Храним Ref для доступа к другим провайдерам
+class SaleNotifier extends StateNotifier<AsyncValue<String?>> {
+  final Ref _ref;
 
-  SaleNotifier(this._ref) : super(const AsyncValue.data(null)); // Начальное состояние - нет активной операции
+  SaleNotifier(this._ref) : super(const AsyncValue.data(null));
 
   Future<void> checkout(PaymentMethod paymentMethod) async {
     final cart = _ref.read(cartProvider);
-
     if (cart.items.isEmpty) {
       state = AsyncValue.error('Корзина пуста!', StackTrace.current);
-
-      Future.delayed(const Duration(seconds: 3), () {
-        if (state is AsyncError) state = const AsyncValue.data(null);
-      });
+      _resetStateAfterDelay();
       return;
     }
 
     state = const AsyncValue.loading();
 
     try {
-      final db = _ref.read(databaseProvider);
-      final saleId = await db.createSaleTransaction(cart.items, cart.totalPrice, paymentMethod);
+      final apiService = _ref.read(apiServiceProvider);
+      // --- ИЗМЕНЕНО: Получаем orderId (String) ---
+      final String createdOrderId = await apiService.createSale(cart.items, cart.totalPrice, paymentMethod);
+      // -------------------------------------------
 
-      state = AsyncValue.data(saleId);
+      // --- ИЗМЕНЕНО: Сохраняем orderId в состоянии ---
+      state = AsyncValue.data(createdOrderId);
+      // ----------------------------------------------
+
       _ref.read(cartProvider.notifier).clearCart();
-      print('Sale created successfully with ID: $saleId, Method: ${paymentMethod.name}');
-    } catch (error, stackTrace) {
-      print('Checkout failed: $error'); // Логируем ошибку
-      state = AsyncValue.error(error, stackTrace);
 
-      Future.delayed(const Duration(seconds: 5), () {
-        if (state is AsyncError) state = const AsyncValue.data(null);
-      });
+      print('Sale created successfully with Order ID: $createdOrderId');
+
+      // Опционально: Сброс состояния
+      // _resetStateAfterDelay();
+    } on UnauthorizedException catch (e, stackTrace) {
+      print('Checkout failed: Unauthorized $e');
+      state = AsyncValue.error(e, stackTrace);
+      _ref.read(authProvider.notifier).logout();
+    } catch (error, stackTrace) {
+      print('Checkout failed: $error');
+      state = AsyncValue.error(error, stackTrace);
+      _resetStateAfterDelay();
     }
   }
 
-  // Метод для сброса состояния вручную (если нужно)
   void resetState() {
-    state = const AsyncValue.data(null);
+    if (state is! AsyncLoading) {
+      state = const AsyncValue.data(null);
+    }
+  }
+
+  void _resetStateAfterDelay([Duration duration = const Duration(seconds: 5)]) {
+    Future.delayed(duration, () {
+      resetState();
+    });
   }
 }

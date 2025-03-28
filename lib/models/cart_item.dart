@@ -1,49 +1,55 @@
+import 'package:meta/meta.dart';
+
+@immutable
 class CartItem {
-  final int productId; // ID товара из базы данных
-  final String sku; // Артикул для быстрой идентификации
-  final String name; // Название товара (для отображения)
-  final double priceAtSale; // Цена *на момент добавления* в корзину
-  int quantity; // Количество этого товара в корзине (изменяемое)
+  final int productId;
+  final String barcode;
+  final String name;
+  final double priceAtSale;
+
+  int quantity;
 
   CartItem({
     required this.productId,
-    required this.sku,
+    required this.barcode,
     required this.name,
     required this.priceAtSale,
+
     required this.quantity,
   });
 
-  // Метод для удобного увеличения количества
-  void increment() {
-    quantity++;
+  CartItem increment() {
+    return copyWith(quantity: quantity + 1);
   }
 
-  // Метод для уменьшения количества
-  // Возвращает true, если количество стало 0 или меньше
-  bool decrement() {
-    quantity--;
-    return quantity <= 0;
+  CartItem? decrement() {
+    if (quantity - 1 <= 0) {
+      return null;
+    }
+    return copyWith(quantity: quantity - 1);
   }
 
-  // Вычисляемое свойство для общей стоимости этой позиции
   double get itemTotal => priceAtSale * quantity;
 
-  // (Опционально) Можно добавить методы для сравнения, копирования и т.д., если потребуется
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) || other is CartItem && runtimeType == other.runtimeType && sku == other.sku; // Считаем элементы одинаковыми, если у них один SKU
-
-  @override
-  int get hashCode => sku.hashCode;
-
-  // Метод для создания копии с возможностью изменения количества
-  CartItem copyWith({int? quantity}) {
+  CartItem copyWith({int? productId, String? barcode, String? name, double? priceAtSale, String? unit, int? quantity}) {
     return CartItem(
-      productId: productId,
-      sku: sku,
-      name: name,
-      priceAtSale: priceAtSale,
+      productId: productId ?? this.productId,
+      barcode: barcode ?? this.barcode,
+      name: name ?? this.name,
+      priceAtSale: priceAtSale ?? this.priceAtSale,
+
       quantity: quantity ?? this.quantity,
     );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is CartItem && runtimeType == other.runtimeType && barcode == other.barcode;
+
+  @override
+  int get hashCode => barcode.hashCode;
+
+  Map<String, dynamic> toJsonForSaleCreation() {
+    return {'product_id': productId, 'quantity': quantity, 'price': priceAtSale, 'cost_price': 0};
   }
 }

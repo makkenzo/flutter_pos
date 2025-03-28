@@ -1,25 +1,152 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_pos/database/database.dart';
 import 'package:flutter_pos/main.dart';
 import 'package:flutter_pos/models/cart_item.dart';
 import 'package:flutter_pos/models/cart_state.dart';
 import 'package:flutter_pos/models/payment_method.dart';
+import 'package:flutter_pos/models/product.dart';
+import 'package:flutter_pos/models/sale.dart';
 import 'package:flutter_pos/providers/cart_provider.dart';
 import 'package:flutter_pos/providers/product_providers.dart';
 import 'package:flutter_pos/providers/sale_provider.dart';
+import 'package:flutter_pos/widgets/barcode_scanner_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:flutter_pos/screens/products/product_list_screen.dart' show Debouncer;
 
-class PosScreen extends ConsumerWidget {
+class PosScreen extends ConsumerStatefulWidget {
   const PosScreen({super.key});
 
-  static const double _tabletBreakpoint = 600.0;
+  static const double _tabletBreakpoint = 720.0;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    ref.listen<AsyncValue<int?>>(saleNotifierProvider, (_, state) {
+  ConsumerState<PosScreen> createState() => _PosScreenState();
+}
+
+class _PosScreenState extends ConsumerState<PosScreen> {
+  final ScrollController _productScrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  final _debouncer = Debouncer(delay: const Duration(milliseconds: 500));
+
+  @override
+  void initState() {
+    super.initState();
+    _productScrollController.addListener(_onProductScroll);
+  }
+
+  @override
+  void dispose() {
+    _productScrollController.removeListener(_onProductScroll);
+    _productScrollController.dispose();
+    _searchController.dispose();
+    _debouncer.dispose();
+    super.dispose();
+  }
+
+  void _onProductScroll() {
+    if (_productScrollController.position.pixels >= _productScrollController.position.maxScrollExtent - 300) {
+      ref.read(productListProvider.notifier).fetchNextPage();
+    }
+  }
+
+  void _onSearchChanged(String query) {
+    _debouncer.run(() {
+      ref.read(productListProvider.notifier).search(query);
+    });
+  }
+
+  Future<void> _handleProductsRefresh() async {
+    await ref.read(productListProvider.notifier).refresh();
+  }
+
+  Future<void> _showBarcodeScannerDialog() async {
+    final String? scannedValue = await showDialog<String?>(
+      context: context,
+      builder: (dialogContext) => const BarcodeScannerDialog(),
+    );
+
+    if (scannedValue != null && scannedValue.isNotEmpty && context.mounted) {
+      await _processScannedBarcode(scannedValue);
+    } else if (scannedValue == null && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Сканирование отменено'), duration: Duration(seconds: 2)));
+    }
+  }
+
+  Future<void> _processScannedBarcode(String barcodeValue) async {
+    if (!context.mounted) return;
+    print("Processing scanned barcode: $barcodeValue");
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [CircularProgressIndicator(strokeWidth: 2), SizedBox(width: 10), Text("Поиск товара...")],
+        ),
+        duration: Duration(seconds: 5),
+      ),
+    );
+
+    try {
+      final Product? product = await ref.read(productByBarcodeProvider(barcodeValue).future);
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+      if (product != null) {
+        _addProductToCart(product);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Товар со штрих-кодом "$barcodeValue" не найден'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      print("Error processing barcode $barcodeValue: $e");
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка при поиске товара: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  void _addProductToCart(Product product) {
+    try {
+      ref.read(cartProvider.notifier).addItem(product);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('"${product.skuName}" добавлен в корзину'),
+          duration: const Duration(seconds: 1),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+    } on Exception catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Не удалось добавить: ${e.toString()}'),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    ref.listen<AsyncValue<String?>>(saleNotifierProvider, (_, state) {
       if (!state.isLoading && state.hasError) {
+        // Обработка ошибки (без изменений)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Ошибка оформления: ${state.error.toString()}'),
@@ -28,41 +155,44 @@ class PosScreen extends ConsumerWidget {
           ),
         );
       } else if (state.hasValue && state.value != null) {
+        // --- Успешное оформление ---
+        final String orderId = state.value!; // Получаем orderId из состояния
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Продажа №${state.value} успешно оформлена'),
+            // Используем orderId в сообщении
+            content: Text('Продажа (Заказ № $orderId) успешно оформлена!'),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 3),
           ),
         );
+        // Сбрасываем состояние saleNotifier для следующей продажи
         ref.read(saleNotifierProvider.notifier).resetState();
+        // ---------------------------
       }
     });
 
+    final cartState = ref.watch(cartProvider);
+    final saleState = ref.watch(saleNotifierProvider);
+    final currencyFormat = NumberFormat.currency(locale: 'ru_RU', symbol: '₸');
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        final bool isTablet = constraints.maxWidth >= _tabletBreakpoint;
+        final bool isTablet = constraints.maxWidth >= PosScreen._tabletBreakpoint;
 
         return DefaultTabController(
           length: 2,
           child: Builder(
             builder: (tabContext) {
-              final cartState = ref.watch(cartProvider);
-              final currencyFormat = NumberFormat.currency(locale: 'ru_RU', symbol: '₸');
-
-              final saleState = ref.watch(saleNotifierProvider);
-
               return Scaffold(
                 appBar: AppBar(
                   title: const Text('Касса / Продажа'),
-                  actions: _buildAppBarActions(context, ref, cartState, currencyFormat, isTablet, tabContext),
-
-                  bottom: isTablet ? null : _buildTabBar(context, cartState),
+                  actions: _buildAppBarActions(context, cartState, currencyFormat, isTablet, tabContext),
+                  bottom: isTablet ? null : _buildTabBar(context, cartState, currencyFormat),
                 ),
                 body:
                     isTablet
-                        ? _buildTabletLayout(context, ref, cartState, currencyFormat, saleState.isLoading)
-                        : _buildMobileLayout(context, ref, cartState, currencyFormat, saleState.isLoading),
+                        ? _buildTabletLayout(context, cartState, currencyFormat, saleState.isLoading)
+                        : _buildMobileLayout(context, cartState, currencyFormat, saleState.isLoading),
               );
             },
           ),
@@ -73,7 +203,6 @@ class PosScreen extends ConsumerWidget {
 
   List<Widget> _buildAppBarActions(
     BuildContext context,
-    WidgetRef ref,
     CartState cartState,
     NumberFormat currencyFormat,
     bool isTablet,
@@ -83,7 +212,7 @@ class PosScreen extends ConsumerWidget {
       IconButton(
         icon: const Icon(Icons.qr_code_scanner),
         tooltip: 'Сканировать штрих-код',
-        onPressed: () => _showBarcodeScannerDialog(context, ref),
+        onPressed: _showBarcodeScannerDialog,
       ),
       if (isTablet)
         Center(
@@ -114,8 +243,7 @@ class PosScreen extends ConsumerWidget {
     ];
   }
 
-  PreferredSizeWidget _buildTabBar(BuildContext context, CartState cartState) {
-    final currencyFormat = NumberFormat.currency(locale: 'ru_RU', symbol: '₸');
+  PreferredSizeWidget _buildTabBar(BuildContext context, CartState cartState, NumberFormat currencyFormat) {
     return TabBar(
       tabs: [
         const Tab(icon: Icon(Icons.inventory_2_outlined), text: 'Товары'),
@@ -125,7 +253,6 @@ class PosScreen extends ConsumerWidget {
             isLabelVisible: cartState.totalItemsCount > 0,
             child: const Icon(Icons.shopping_cart_outlined),
           ),
-
           text: 'Корзина (${currencyFormat.format(cartState.totalPrice)})',
         ),
       ],
@@ -134,7 +261,6 @@ class PosScreen extends ConsumerWidget {
 
   Widget _buildTabletLayout(
     BuildContext context,
-    WidgetRef ref,
     CartState cartState,
     NumberFormat currencyFormat,
     bool isCheckoutLoading,
@@ -142,9 +268,8 @@ class PosScreen extends ConsumerWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(flex: 2, child: _buildProductSelection(context, ref)),
+        Expanded(flex: 2, child: _buildProductSelection()),
         const VerticalDivider(width: 1, thickness: 1),
-
         Expanded(
           flex: 1,
           child: _CartViewWidget(
@@ -159,67 +284,101 @@ class PosScreen extends ConsumerWidget {
 
   Widget _buildMobileLayout(
     BuildContext context,
-    WidgetRef ref,
     CartState cartState,
     NumberFormat currencyFormat,
     bool isCheckoutLoading,
   ) {
     return TabBarView(
       children: [
-        _buildProductSelection(context, ref),
+        _buildProductSelection(),
         _CartViewWidget(cartState: cartState, currencyFormat: currencyFormat, isCheckoutLoading: isCheckoutLoading),
       ],
     );
   }
 
-  Widget _buildProductSelection(BuildContext context, WidgetRef ref) {
-    final productListAsync = ref.watch(productListProvider);
+  Widget _buildProductSelection() {
+    final ProductListState productState = ref.watch(productListProvider);
+    final List<Product> products = productState.products;
+    final bool isLoadingInitial = productState.isLoading && products.isEmpty && productState.error == null;
+    final bool isLoadingMore = productState.isLoading && products.isNotEmpty;
+    final bool hasError = productState.error != null && !productState.isLoading;
 
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.all(8.0),
           child: TextField(
+            controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Поиск товара по названию или SKU...',
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+              hintText: 'Поиск товара...',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon:
+                  _searchController.text.isNotEmpty
+                      ? IconButton(
+                        icon: const Icon(Icons.clear, size: 20),
+                        onPressed: () {
+                          _searchController.clear();
+                          _onSearchChanged('');
+                        },
+                      )
+                      : null,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide.none),
+              filled: true,
+              fillColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.6),
+              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
             ),
-            onChanged: (value) {
-              /* TODO: Поиск */
-            },
+            onChanged: _onSearchChanged,
           ),
         ),
+
         Expanded(
-          child: productListAsync.when(
-            data: (products) {
-              if (products.isEmpty) {
-                return const Center(child: Text('Нет доступных товаров'));
-              }
-              return GridView.builder(
-                padding: const EdgeInsets.all(8.0),
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 180,
-                  childAspectRatio: 2 / 2.5,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                ),
-                itemCount: products.length,
-                itemBuilder: (context, index) {
-                  final product = products[index];
-                  return _buildProductTile(context, ref, product);
-                },
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => Center(child: Text('Ошибка загрузки товаров: $error')),
+          child: RefreshIndicator(
+            onRefresh: _handleProductsRefresh,
+            child: Builder(
+              builder: (context) {
+                if (isLoadingInitial) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (hasError && products.isEmpty) {
+                  return Center(child: Text('Ошибка: ${productState.error}'));
+                }
+                if (products.isEmpty && !productState.isLoading) {
+                  return Center(
+                    child: Text(
+                      productState.currentQuery != null && productState.currentQuery!.isNotEmpty
+                          ? 'Товары не найдены'
+                          : 'Нет товаров для продажи',
+                    ),
+                  );
+                }
+
+                return GridView.builder(
+                  controller: _productScrollController,
+                  padding: const EdgeInsets.all(8.0),
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 200,
+                    childAspectRatio: 2 / 2.8,
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                  ),
+                  itemCount: products.length + (isLoadingMore ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == products.length) {
+                      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                    }
+                    final product = products[index];
+                    return _buildProductTile(product);
+                  },
+                );
+              },
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildProductTile(BuildContext context, WidgetRef ref, Product product) {
+  Widget _buildProductTile(Product product) {
     final currencyFormat = NumberFormat.currency(locale: 'ru_RU', symbol: '₸');
     bool inStock = product.quantity > 0;
 
@@ -227,117 +386,47 @@ class PosScreen extends ConsumerWidget {
       clipBehavior: Clip.antiAlias,
       elevation: 2.0,
       child: InkWell(
-        onTap:
-            inStock
-                ? () {
-                  ref.read(cartProvider.notifier).addItem(product);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('"${product.name}" добавлен в корзину'),
-                      duration: const Duration(seconds: 1),
-                      behavior: SnackBarBehavior.floating,
-                      margin: const EdgeInsets.all(8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  );
-                }
-                : null,
+        onTap: inStock ? () => _addProductToCart(product) : null,
+
         child: Opacity(
-          opacity: inStock ? 1.0 : 0.5,
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  product.name,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  '${product.sku}\nОстаток: ${product.quantity} шт.',
-                  style: Theme.of(context).textTheme.bodySmall,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Text(
-                    currencyFormat.format(product.sellingPrice),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+          opacity: inStock ? 1.0 : 0.4,
+          child: GridTile(
+            footer: GridTileBar(
+              backgroundColor: Colors.black54,
+              title: Text(
+                currencyFormat.format(product.price),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              ),
+              trailing:
+                  inStock ? null : const Icon(Icons.remove_shopping_cart_outlined, size: 18, color: Colors.white70),
+            ),
+
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 35),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    product.skuName,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-                if (!inStock)
-                  const Align(
-                    alignment: Alignment.center,
-                    child: Text('Нет в наличии', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+
+                  Text(
+                    'ШК: ${product.barcode}\nОст: ${product.quantity} ${product.unit}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
-  }
-
-  Future<void> _processScannedBarcode(BuildContext context, WidgetRef ref, String barcodeValue) async {
-    if (barcodeValue.isEmpty) return;
-
-    final db = ref.read(databaseProvider);
-    final product = await db.getProductBySku(barcodeValue);
-
-    if (!context.mounted) return;
-
-    if (product != null) {
-      if (product.quantity > 0) {
-        ref.read(cartProvider.notifier).addItem(product);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('"${product.name}" добавлен в корзину'),
-            duration: const Duration(seconds: 1),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Товар "${product.name}" (${product.sku}) закончился на складе'),
-            backgroundColor: Colors.orange,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Товар со штрих-кодом "$barcodeValue" не найден'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
-  }
-
-  Future<void> _showBarcodeScannerDialog(BuildContext context, WidgetRef ref) async {
-    final String? scannedValue = await showDialog<String?>(
-      context: context,
-      builder: (dialogContext) => const _BarcodeScannerDialog(),
-    );
-
-    if (scannedValue != null && scannedValue.isNotEmpty && context.mounted) {
-      await _processScannedBarcode(context, ref, scannedValue);
-    } else if (scannedValue == null && context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Сканирование отменено'), duration: Duration(seconds: 2)));
-    }
   }
 }
 
@@ -425,14 +514,69 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
               const SizedBox(height: 16),
 
               ElevatedButton.icon(
-                icon: widget.isCheckoutLoading ? Container(/* ... Индикатор ... */) : const Icon(Icons.payment),
-                label: Text(widget.isCheckoutLoading ? 'Оформление...' : 'Оформить продажу'),
-                style: ElevatedButton.styleFrom(/* ... Стили ... */),
+                // --- СТИЛИ КНОПКИ ---
+                style: ElevatedButton.styleFrom(
+                  // Задаем основной цвет фона из темы
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  // Задаем основной цвет текста/иконки из темы
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                  // Вертикальный отступ
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  // Стиль текста
+                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  // Скругление углов
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  // Минимальный размер (опционально, чтобы кнопка не была слишком маленькой)
+                  minimumSize: const Size(double.infinity, 50), // Занимает всю ширину
+                ).copyWith(
+                  // Переопределяем цвет фона для состояния disabled (когда isLoading или корзина пуста)
+                  backgroundColor: MaterialStateProperty.resolveWith<Color?>((Set<MaterialState> states) {
+                    if (states.contains(MaterialState.disabled)) {
+                      // Используем основной цвет, но с меньшей прозрачностью
+                      return Theme.of(context).colorScheme.primary.withOpacity(0.5);
+                    }
+                    // Для всех остальных состояний (enabled, pressed, hovered)
+                    // возвращаем null, чтобы использовался backgroundColor из styleFrom
+                    return null;
+                  }),
+                  // Можно также изменить цвет текста/иконки для disabled, если нужно
+                  // foregroundColor: MaterialStateProperty.resolveWith<Color?>(
+                  //   (Set<MaterialState> states) {
+                  //     if (states.contains(MaterialState.disabled)) {
+                  //       return Theme.of(context).colorScheme.onPrimary.withOpacity(0.7);
+                  //     }
+                  //     return null; // Используем основной foregroundColor
+                  //   },
+                  // ),
+                ),
 
+                // --- ИКОНКА / ИНДИКАТОР ЗАГРУЗКИ ---
+                icon:
+                    widget.isCheckoutLoading
+                        ? Container(
+                          // Показываем индикатор, если isCheckoutLoading == true
+                          width: 20, // Задаем размер контейнера для индикатора
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5, // Толщина линии индикатора
+                            // Цвет индикатора должен контрастировать с фоном кнопки (primary)
+                            // Обычно onPrimary (белый) подходит
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
+                        )
+                        : const Icon(Icons.payment, size: 22), // Иконка по умолчанию
+                // --- ТЕКСТ КНОПКИ ---
+                label: Text(widget.isCheckoutLoading ? 'ОФОРМЛЕНИЕ...' : 'ОФОРМИТЬ ПРОДАЖУ'),
+
+                // --- ОБРАБОТЧИК НАЖАТИЯ ---
+                // Кнопка заблокирована (onPressed = null), если:
+                // 1. Корзина пуста (items.isEmpty)
+                // 2. Идет процесс оформления (widget.isCheckoutLoading)
                 onPressed:
                     items.isEmpty || widget.isCheckoutLoading
-                        ? null
+                        ? null // Кнопка заблокирована
                         : () {
+                          // Вызываем метод checkout из SaleNotifier, передавая выбранный метод оплаты
                           ref.read(saleNotifierProvider.notifier).checkout(_selectedPaymentMethod);
                         },
               ),
@@ -468,7 +612,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             constraints: const BoxConstraints(),
             tooltip: 'Уменьшить',
             onPressed: () {
-              ref.read(cartProvider.notifier).decrementQuantity(item.sku);
+              ref.read(cartProvider.notifier).decrementQuantity(item.barcode);
             },
           ),
 
@@ -483,7 +627,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             constraints: const BoxConstraints(),
             tooltip: 'Увеличить',
             onPressed: () {
-              ref.read(cartProvider.notifier).incrementQuantity(item.sku);
+              ref.read(cartProvider.notifier).incrementQuantity(item.barcode);
             },
           ),
         ],
@@ -508,7 +652,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             constraints: const BoxConstraints(),
             tooltip: 'Удалить из корзины',
             onPressed: () {
-              ref.read(cartProvider.notifier).removeItem(item.sku);
+              ref.read(cartProvider.notifier).removeItem(item.barcode);
             },
           ),
         ],
@@ -537,199 +681,5 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
         );
       },
     );
-  }
-}
-
-class _BarcodeScannerDialog extends ConsumerStatefulWidget {
-  const _BarcodeScannerDialog({Key? key}) : super(key: key);
-
-  @override
-  ConsumerState<_BarcodeScannerDialog> createState() => _BarcodeScannerDialogState();
-}
-
-class _BarcodeScannerDialogState extends ConsumerState<_BarcodeScannerDialog> {
-  final MobileScannerController controller = MobileScannerController(facing: CameraFacing.back);
-  bool _isProcessing = false;
-  bool _isTorchOn = false;
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final scanWindowSize = MediaQuery.of(context).size.width * 0.6;
-    final scanWindow = Rect.fromCenter(
-      center: MediaQuery.of(context).size.center(Offset.zero),
-      width: scanWindowSize,
-      height: scanWindowSize,
-    );
-
-    return AlertDialog(
-      title: const Text('Сканировать штрих-код'),
-      contentPadding: EdgeInsets.zero,
-      insetPadding: const EdgeInsets.all(10),
-      content: SizedBox(
-        width: MediaQuery.of(context).size.width * 0.9,
-        height: MediaQuery.of(context).size.height * 0.6,
-        child: Stack(
-          children: [
-            MobileScanner(
-              controller: controller,
-              scanWindow: scanWindow,
-              onDetect: (capture) {
-                if (_isProcessing) return;
-
-                final List<Barcode> barcodes = capture.barcodes;
-                String? scannedValue;
-                for (final barcode in barcodes) {
-                  if (barcode.rawValue != null && barcode.rawValue!.isNotEmpty) {
-                    scannedValue = barcode.rawValue;
-                    break;
-                  }
-                }
-
-                if (scannedValue != null) {
-                  setState(() {
-                    _isProcessing = true;
-                  });
-                  print('Barcode found! $scannedValue');
-
-                  Navigator.of(context).pop(scannedValue);
-                } else {
-                  print('Detected barcode with empty value.');
-                }
-              },
-
-              errorBuilder: (context, error, child) {
-                print('Scanner Error: $error');
-
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      'Ошибка сканера:\n${error.toString()}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red),
-                    ),
-                  ),
-                );
-              },
-            ),
-
-            CustomPaint(size: Size.infinite, painter: ScannerOverlayPainter(scanWindow: scanWindow)),
-
-            Positioned(
-              bottom: 20,
-              left: 20,
-              child: IconButton(
-                color: Colors.white,
-                iconSize: 32.0,
-                icon: Icon(_isTorchOn ? Icons.flash_on : Icons.flash_off),
-                tooltip: 'Фонарик',
-                onPressed: () async {
-                  try {
-                    await controller.toggleTorch();
-
-                    setState(() {
-                      _isTorchOn = !_isTorchOn;
-                    });
-                  } catch (e) {
-                    print("Failed to toggle torch: $e");
-                    if (mounted) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text('Не удалось переключить фонарик: $e')));
-                    }
-                  }
-                },
-              ),
-            ),
-
-            Positioned(
-              bottom: 20,
-              right: 20,
-              child: IconButton(
-                color: Colors.white,
-                iconSize: 32.0,
-                icon: const Icon(Icons.cameraswitch),
-                tooltip: 'Сменить камеру',
-                onPressed: () async {
-                  try {
-                    await controller.switchCamera();
-                  } catch (e) {
-                    print("Failed to switch camera: $e");
-                    if (mounted) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text('Не удалось сменить камеру: $e')));
-                    }
-                  }
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-      actions: [TextButton(child: const Text('Отмена'), onPressed: () => Navigator.of(context).pop())],
-    );
-  }
-}
-
-// ===========================================================================
-// (Опционально) Вспомогательный Painter для рамки сканирования
-// ===========================================================================
-class ScannerOverlayPainter extends CustomPainter {
-  final Rect scanWindow;
-  final double borderRadius;
-
-  ScannerOverlayPainter({required this.scanWindow, this.borderRadius = 12.0});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final backgroundPath = Path()..addRect(Rect.largest);
-    final cutoutPath =
-        Path()..addRRect(
-          RRect.fromRectAndCorners(
-            scanWindow,
-            topLeft: Radius.circular(borderRadius),
-            topRight: Radius.circular(borderRadius),
-            bottomLeft: Radius.circular(borderRadius),
-            bottomRight: Radius.circular(borderRadius),
-          ),
-        );
-
-    final backgroundPaint = Paint()..color = Colors.black.withOpacity(0.5);
-
-    final backgroundPathCutout = Path.combine(PathOperation.difference, backgroundPath, cutoutPath);
-    canvas.drawPath(backgroundPathCutout, backgroundPaint);
-
-    final borderPaint =
-        Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.0;
-    canvas.drawRRect(
-      RRect.fromRectAndCorners(
-        scanWindow,
-        topLeft: Radius.circular(borderRadius),
-        topRight: Radius.circular(borderRadius),
-        bottomLeft: Radius.circular(borderRadius),
-        bottomRight: Radius.circular(borderRadius),
-      ),
-      borderPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false;
   }
 }

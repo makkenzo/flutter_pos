@@ -44,6 +44,23 @@ function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_options(${TARGET} PRIVATE -Wall -Werror)
   target_compile_options(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:-O3>")
   target_compile_definitions(${TARGET} PRIVATE "$<$<NOT:$<CONFIG:Debug>>:NDEBUG>")
+
+  # --- Добавляем определение APPLICATION_ID ---
+  # Сначала пробуем использовать переменную CMake, если она определена
+  if(DEFINED APPLICATION_ID)
+    target_compile_definitions(${TARGET} PRIVATE "APPLICATION_ID=\"${APPLICATION_ID}\"")
+    message(STATUS "Using CMake variable APPLICATION_ID: ${APPLICATION_ID}")
+  else()
+    # Если переменная CMake не определена, задаем вручную
+    # ЗАМЕНИТЕ "com.example.pos_app" на ваш реальный ID приложения Linux
+    # Его можно найти в linux/my_application.cc (поле GApplication::id)
+    # или в linux/meson.build (переменная application_id)
+    set(MANUAL_APP_ID "com.example.pos_app") # <-- ЗАМЕНИТЕ ЗДЕСЬ
+    target_compile_definitions(${TARGET} PRIVATE "APPLICATION_ID=\"${MANUAL_APP_ID}\"")
+    message(STATUS "CMake variable APPLICATION_ID not found. Using manual ID: ${MANUAL_APP_ID}")
+  endif()
+  # ------------------------------------------
+
 endfunction()
 
 # Flutter library and tool build rules.
