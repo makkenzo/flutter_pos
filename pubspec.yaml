@@ -34,10 +34,10 @@ flutter:
     assets:
         - assets/fonts/
     fonts:
-        - family: Roboto
+        - family: DejaVu
           fonts:
-              - asset: assets/fonts/Roboto-Regular.ttf
-              - asset: assets/fonts/Roboto-Bold.ttf
+              - asset: assets/fonts/DejaVuSans.ttf
+              - asset: assets/fonts/DejaVuSans-Bold.ttf
                 weight: 700
-              - asset: assets/fonts/Roboto-Italic.ttf
+              - asset: assets/fonts/DejaVuSerif-Italic.ttf
                 style: italic

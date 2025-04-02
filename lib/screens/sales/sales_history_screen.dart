@@ -250,9 +250,11 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                       (saleItems == null || saleItems.isEmpty)
                           ? null
                           : () async {
-                            Navigator.of(dialogContext).pop();
+                            final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            if (!context.mounted) return;
+
+                            scaffoldMessenger.showSnackBar(
                               const SnackBar(
                                 content: Row(
                                   children: [
@@ -265,22 +267,43 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                               ),
                             );
 
-                            try {
-                              final Uint8List pdfBytes = await generateReceiptPdf(sale, saleItems!);
-                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            Uint8List? pdfBytes;
+                            Object? pdfError;
 
-                              await Printing.layoutPdf(
-                                onLayout: (PdfPageFormat format) async => pdfBytes,
-                                name: 'receipt_${sale.orderId}.pdf',
-                              );
+                            try {
+                              pdfBytes = await generateReceiptPdf(sale, saleItems!);
                             } catch (e) {
-                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              pdfError = e;
+                            }
+
+                            if (!context.mounted) return;
+
+                            scaffoldMessenger.hideCurrentSnackBar();
+
+                            if (pdfBytes != null) {
+                              try {
+                                await Printing.layoutPdf(
+                                  onLayout: (PdfPageFormat format) async => pdfBytes!,
+                                  name: 'receipt_${sale.orderId}.pdf',
+                                );
+
+                                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                              } catch (printError) {
+                                scaffoldMessenger.showSnackBar(
+                                  SnackBar(content: Text('Ошибка печати: $printError'), backgroundColor: Colors.red),
+                                );
+
+                                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                              }
+                            } else if (pdfError != null) {
+                              scaffoldMessenger.showSnackBar(
                                 SnackBar(
-                                  content: Text('Ошибка при генерации чека:\n${_formatErrorMessage(e)}'),
+                                  content: Text('Ошибка при генерации чека:\n${_formatErrorMessage(pdfError)}'),
                                   backgroundColor: Colors.red,
                                 ),
                               );
+
+                              if (dialogContext.mounted) Navigator.of(dialogContext).pop();
                             }
                           },
                 ),
