@@ -9,7 +9,9 @@ import 'package:pdf/widgets.dart' as pw;
 
 Future<pw.Font> _loadPdfFont(String fontAssetPath) async {
   try {
-    print("Attempting to load font from: $fontAssetPath"); // Лог перед загрузкой
+    print(
+      "Attempting to load font from: $fontAssetPath",
+    ); // Лог перед загрузкой
     final fontData = await rootBundle.load(fontAssetPath);
     final pdfFont = pw.Font.ttf(fontData);
     print("Successfully loaded font data for: $fontAssetPath"); // Лог успеха
@@ -38,7 +40,9 @@ Future<Uint8List> generateReceiptPdf(Sale sale, List<SaleItem> items) async {
     boldFont = await _loadPdfFont('assets/fonts/DejaVuSans-Bold.ttf');
   } catch (e) {
     print("--- PDF Generation FAILED due to font loading error ---");
-    throw Exception("Could not load fonts for PDF generation. See logs for details.");
+    throw Exception(
+      "Could not load fonts for PDF generation. See logs for details.",
+    );
   }
   print("--- Fonts loaded successfully ---");
 
@@ -48,7 +52,10 @@ Future<Uint8List> generateReceiptPdf(Sale sale, List<SaleItem> items) async {
   final pw.TextStyle smallStyle = pw.TextStyle(font: regularFont, fontSize: 8);
   final pw.TextStyle smallBoldStyle = pw.TextStyle(font: boldFont, fontSize: 8);
   final pw.TextStyle headerStyle = pw.TextStyle(font: boldFont, fontSize: 14);
-  final pw.TextStyle checkHeaderStyle = pw.TextStyle(font: boldFont, fontSize: 12);
+  final pw.TextStyle checkHeaderStyle = pw.TextStyle(
+    font: boldFont,
+    fontSize: 12,
+  );
   final pw.TextStyle totalStyle = pw.TextStyle(font: boldFont, fontSize: 11);
 
   const String storeName = 'SAMPLE SHOP';
@@ -79,17 +86,28 @@ Future<Uint8List> generateReceiptPdf(Sale sale, List<SaleItem> items) async {
 
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [pw.Text('Заказ №:', style: smallStyle), pw.Text(sale.orderId, style: smallBoldStyle)],
+                children: [
+                  pw.Text('Заказ №:', style: smallStyle),
+                  pw.Text(sale.orderId, style: smallBoldStyle),
+                ],
               ),
               pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
                   pw.Text('Дата:', style: smallStyle),
-                  pw.Text(dateFormat.format(sale.createdAt.toLocal()), style: smallStyle),
+                  pw.Text(
+                    dateFormat.format(sale.createdAt.toLocal()),
+                    style: smallStyle,
+                  ),
                 ],
               ),
               pw.Divider(height: 10, thickness: 0.5),
-              _buildItemsTable(items, currencyFormat, smallStyle, smallBoldStyle),
+              _buildItemsTable(
+                items,
+                currencyFormat,
+                smallStyle,
+                smallBoldStyle,
+              ),
               pw.Divider(height: 10, thickness: 0.5),
 
               pw.Row(
@@ -97,7 +115,10 @@ Future<Uint8List> generateReceiptPdf(Sale sale, List<SaleItem> items) async {
                 children: [
                   pw.Text('ИТОГО К ОПЛАТЕ:', style: totalStyle),
                   pw.SizedBox(width: 10),
-                  pw.Text(currencyFormat.format(sale.totalAmount), style: totalStyle),
+                  pw.Text(
+                    currencyFormat.format(sale.totalAmount),
+                    style: totalStyle,
+                  ),
                 ],
               ),
               pw.SizedBox(height: 5),
@@ -110,7 +131,9 @@ Future<Uint8List> generateReceiptPdf(Sale sale, List<SaleItem> items) async {
                 ],
               ),
               pw.SizedBox(height: 15),
-              pw.Center(child: pw.Text('Спасибо за покупку!', style: textStyle)),
+              pw.Center(
+                child: pw.Text('Спасибо за покупку!', style: textStyle),
+              ),
               pw.SizedBox(height: 10),
               // Опционально: Штрих-код или QR-код заказа
               pw.Center(
@@ -167,7 +190,9 @@ pw.Widget _buildItemsTable(
     border: null, // Без внешних границ
     headerStyle: cellBoldStyle,
     cellStyle: cellStyle,
-    headerDecoration: const pw.BoxDecoration(border: pw.Border(bottom: pw.BorderSide(width: 0.5))),
+    headerDecoration: const pw.BoxDecoration(
+      border: pw.Border(bottom: pw.BorderSide(width: 0.5)),
+    ),
     cellHeight: 15, // Уменьшаем высоту ячеек
     // Выравнивание ячеек
     cellAlignments: {

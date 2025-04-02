@@ -12,8 +12,7 @@ import 'package:flutter_pos/widgets/barcode_scanner_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:flutter_pos/screens/products/product_list_screen.dart'
-    show Debouncer;
+import 'package:flutter_pos/screens/products/product_list_screen.dart' show Debouncer;
 
 class PosScreen extends ConsumerStatefulWidget {
   const PosScreen({super.key});
@@ -45,8 +44,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   }
 
   void _onProductScroll() {
-    if (_productScrollController.position.pixels >=
-        _productScrollController.position.maxScrollExtent - 300) {
+    if (_productScrollController.position.pixels >= _productScrollController.position.maxScrollExtent - 300) {
       ref.read(productListProvider.notifier).fetchNextPage();
     }
   }
@@ -70,12 +68,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     if (scannedValue != null && scannedValue.isNotEmpty && context.mounted) {
       await _processScannedBarcode(scannedValue);
     } else if (scannedValue == null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Сканирование отменено'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Сканирование отменено'), duration: Duration(seconds: 2)));
     }
   }
 
@@ -86,20 +81,14 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Row(
-          children: [
-            CircularProgressIndicator(strokeWidth: 2),
-            SizedBox(width: 10),
-            Text("Поиск товара..."),
-          ],
+          children: [CircularProgressIndicator(strokeWidth: 2), SizedBox(width: 10), Text("Поиск товара...")],
         ),
         duration: Duration(seconds: 5),
       ),
     );
 
     try {
-      final Product? product = await ref.read(
-        productByBarcodeProvider(barcodeValue).future,
-      );
+      final Product? product = await ref.read(productByBarcodeProvider(barcodeValue).future);
 
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -188,8 +177,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final bool isTablet =
-            constraints.maxWidth >= PosScreen._tabletBreakpoint;
+        final bool isTablet = constraints.maxWidth >= PosScreen._tabletBreakpoint;
 
         return DefaultTabController(
           length: 2,
@@ -198,32 +186,13 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               return Scaffold(
                 appBar: AppBar(
                   title: const Text('Касса / Продажа'),
-                  actions: _buildAppBarActions(
-                    context,
-                    cartState,
-                    currencyFormat,
-                    isTablet,
-                    tabContext,
-                  ),
-                  bottom:
-                      isTablet
-                          ? null
-                          : _buildTabBar(context, cartState, currencyFormat),
+                  actions: _buildAppBarActions(context, cartState, currencyFormat, isTablet, tabContext),
+                  bottom: isTablet ? null : _buildTabBar(context, cartState, currencyFormat),
                 ),
                 body:
                     isTablet
-                        ? _buildTabletLayout(
-                          context,
-                          cartState,
-                          currencyFormat,
-                          saleState.isLoading,
-                        )
-                        : _buildMobileLayout(
-                          context,
-                          cartState,
-                          currencyFormat,
-                          saleState.isLoading,
-                        ),
+                        ? _buildTabletLayout(context, cartState, currencyFormat, saleState.isLoading)
+                        : _buildMobileLayout(context, cartState, currencyFormat, saleState.isLoading),
               );
             },
           ),
@@ -274,11 +243,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     ];
   }
 
-  PreferredSizeWidget _buildTabBar(
-    BuildContext context,
-    CartState cartState,
-    NumberFormat currencyFormat,
-  ) {
+  PreferredSizeWidget _buildTabBar(BuildContext context, CartState cartState, NumberFormat currencyFormat) {
     return TabBar(
       tabs: [
         const Tab(icon: Icon(Icons.inventory_2_outlined), text: 'Товары'),
@@ -326,11 +291,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     return TabBarView(
       children: [
         _buildProductSelection(),
-        _CartViewWidget(
-          cartState: cartState,
-          currencyFormat: currencyFormat,
-          isCheckoutLoading: isCheckoutLoading,
-        ),
+        _CartViewWidget(cartState: cartState, currencyFormat: currencyFormat, isCheckoutLoading: isCheckoutLoading),
       ],
     );
   }
@@ -338,10 +299,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   Widget _buildProductSelection() {
     final ProductListState productState = ref.watch(productListProvider);
     final List<Product> products = productState.products;
-    final bool isLoadingInitial =
-        productState.isLoading &&
-        products.isEmpty &&
-        productState.error == null;
+    final bool isLoadingInitial = productState.isLoading && products.isEmpty && productState.error == null;
     final bool isLoadingMore = productState.isLoading && products.isNotEmpty;
     final bool hasError = productState.error != null && !productState.isLoading;
 
@@ -364,18 +322,10 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         },
                       )
                       : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30.0),
-                borderSide: BorderSide.none,
-              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide.none),
               filled: true,
-              fillColor: Theme.of(
-                context,
-              ).colorScheme.surfaceVariant.withOpacity(0.6),
-              contentPadding: const EdgeInsets.symmetric(
-                vertical: 0,
-                horizontal: 16,
-              ),
+              fillColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.6),
+              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
             ),
             onChanged: _onSearchChanged,
           ),
@@ -395,8 +345,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 if (products.isEmpty && !productState.isLoading) {
                   return Center(
                     child: Text(
-                      productState.currentQuery != null &&
-                              productState.currentQuery!.isNotEmpty
+                      productState.currentQuery != null && productState.currentQuery!.isNotEmpty
                           ? 'Товары не найдены'
                           : 'Нет товаров для продажи',
                     ),
@@ -415,9 +364,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   itemCount: products.length + (isLoadingMore ? 1 : 0),
                   itemBuilder: (context, index) {
                     if (index == products.length) {
-                      return const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      );
+                      return const Center(child: CircularProgressIndicator(strokeWidth: 2));
                     }
                     final product = products[index];
                     return _buildProductTile(product);
@@ -452,10 +399,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               children: [
                 Text(
                   product.skuName,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
+                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, fontSize: 15),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
@@ -475,10 +419,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   currencyFormat.format(product.price),
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color:
-                        inStock
-                            ? theme.colorScheme.primary
-                            : theme.disabledColor,
+                    color: inStock ? theme.colorScheme.primary : theme.disabledColor,
                     fontSize: 16, // Крупнее
                   ),
                   textAlign: TextAlign.center,
@@ -497,11 +438,7 @@ class _CartViewWidget extends ConsumerStatefulWidget {
   final NumberFormat currencyFormat;
   final bool isCheckoutLoading;
 
-  const _CartViewWidget({
-    required this.cartState,
-    required this.currencyFormat,
-    required this.isCheckoutLoading,
-  });
+  const _CartViewWidget({required this.cartState, required this.currencyFormat, required this.isCheckoutLoading});
 
   @override
   ConsumerState<_CartViewWidget> createState() => _CartViewWidgetState();
@@ -526,12 +463,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
                     itemBuilder: (context, index) {
                       final item = items[index];
 
-                      return _buildCartItemTile(
-                        context,
-                        ref,
-                        item,
-                        widget.currencyFormat,
-                      );
+                      return _buildCartItemTile(context, ref, item, widget.currencyFormat);
                     },
                   ),
         ),
@@ -544,10 +476,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Text(
-                  'Метод оплаты:',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
+                child: Text('Метод оплаты:', style: Theme.of(context).textTheme.titleSmall),
               ),
 
               Column(
@@ -581,9 +510,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
                   Text('Итого:', style: Theme.of(context).textTheme.titleLarge),
                   Text(
                     widget.currencyFormat.format(widget.cartState.totalPrice),
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -599,29 +526,17 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
                   // Вертикальный отступ
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   // Стиль текста
-                  textStyle: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   // Скругление углов
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   // Минимальный размер (опционально, чтобы кнопка не была слишком маленькой)
-                  minimumSize: const Size(
-                    double.infinity,
-                    50,
-                  ), // Занимает всю ширину
+                  minimumSize: const Size(double.infinity, 50), // Занимает всю ширину
                 ).copyWith(
                   // Переопределяем цвет фона для состояния disabled (когда isLoading или корзина пуста)
-                  backgroundColor: MaterialStateProperty.resolveWith<Color?>((
-                    Set<MaterialState> states,
-                  ) {
+                  backgroundColor: MaterialStateProperty.resolveWith<Color?>((Set<MaterialState> states) {
                     if (states.contains(MaterialState.disabled)) {
                       // Используем основной цвет, но с меньшей прозрачностью
-                      return Theme.of(
-                        context,
-                      ).colorScheme.primary.withOpacity(0.5);
+                      return Theme.of(context).colorScheme.primary.withOpacity(0.5);
                     }
                     // Для всех остальных состояний (enabled, pressed, hovered)
                     // возвращаем null, чтобы использовался backgroundColor из styleFrom
@@ -652,16 +567,9 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
                             color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
-                        : const Icon(
-                          Icons.payment,
-                          size: 22,
-                        ), // Иконка по умолчанию
+                        : const Icon(Icons.payment, size: 22), // Иконка по умолчанию
                 // --- ТЕКСТ КНОПКИ ---
-                label: Text(
-                  widget.isCheckoutLoading
-                      ? 'ОФОРМЛЕНИЕ...'
-                      : 'ОФОРМИТЬ ПРОДАЖУ',
-                ),
+                label: Text(widget.isCheckoutLoading ? 'ОФОРМЛЕНИЕ...' : 'ОФОРМИТЬ ПРОДАЖУ'),
 
                 // --- ОБРАБОТЧИК НАЖАТИЯ ---
                 // Кнопка заблокирована (onPressed = null), если:
@@ -672,19 +580,14 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
                         ? null // Кнопка заблокирована
                         : () {
                           // Вызываем метод checkout из SaleNotifier, передавая выбранный метод оплаты
-                          ref
-                              .read(saleNotifierProvider.notifier)
-                              .checkout(_selectedPaymentMethod);
+                          ref.read(saleNotifierProvider.notifier).checkout(_selectedPaymentMethod);
                         },
               ),
 
               if (items.isNotEmpty && !widget.isCheckoutLoading) ...[
                 const SizedBox(height: 8),
                 TextButton.icon(
-                  icon: const Icon(
-                    Icons.remove_shopping_cart_outlined,
-                    size: 18,
-                  ),
+                  icon: const Icon(Icons.remove_shopping_cart_outlined, size: 18),
                   label: const Text('Очистить корзину'),
                   style: TextButton.styleFrom(foregroundColor: Colors.red),
                   onPressed: () => _showClearCartConfirmation(context, ref),
@@ -697,12 +600,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
     );
   }
 
-  Widget _buildCartItemTile(
-    BuildContext context,
-    WidgetRef ref,
-    CartItem item,
-    NumberFormat currencyFormat,
-  ) {
+  Widget _buildCartItemTile(BuildContext context, WidgetRef ref, CartItem item, NumberFormat currencyFormat) {
     return ListTile(
       title: Text(item.name),
       subtitle: Text('${currencyFormat.format(item.priceAtSale)} / шт.'),
@@ -723,10 +621,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
 
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: Text(
-              item.quantity.toString(),
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
+            child: Text(item.quantity.toString(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
           IconButton(
             icon: const Icon(Icons.add_circle_outline, color: Colors.green),
@@ -776,10 +671,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
           title: const Text('Очистить корзину?'),
           content: const Text('Вы уверены...?'),
           actions: <Widget>[
-            TextButton(
-              child: const Text('Отмена'),
-              onPressed: () => Navigator.of(ctx).pop(),
-            ),
+            TextButton(child: const Text('Отмена'), onPressed: () => Navigator.of(ctx).pop()),
             TextButton(
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Очистить'),

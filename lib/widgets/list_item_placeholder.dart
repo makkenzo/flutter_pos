@@ -48,16 +48,32 @@ class SalesHistoryListItemPlaceholder extends StatelessWidget {
     final color = Colors.grey.shade300;
     return ListTile(
       leading: CircleAvatar(backgroundColor: color), // Оставляем кругляш для ID
-      title: Container(height: 14, width: MediaQuery.of(context).size.width * 0.6, color: color),
+      title: Container(
+        height: 14,
+        width: MediaQuery.of(context).size.width * 0.6,
+        color: color,
+      ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 4),
-          Container(height: 10, width: MediaQuery.of(context).size.width * 0.7, color: color),
+          Container(
+            height: 10,
+            width: MediaQuery.of(context).size.width * 0.7,
+            color: color,
+          ),
           const SizedBox(height: 4),
-          Container(height: 10, width: MediaQuery.of(context).size.width * 0.5, color: color),
+          Container(
+            height: 10,
+            width: MediaQuery.of(context).size.width * 0.5,
+            color: color,
+          ),
           const SizedBox(height: 4),
-          Container(height: 10, width: MediaQuery.of(context).size.width * 0.4, color: color),
+          Container(
+            height: 10,
+            width: MediaQuery.of(context).size.width * 0.4,
+            color: color,
+          ),
         ],
       ),
       isThreeLine: true,

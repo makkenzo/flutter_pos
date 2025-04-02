@@ -38,7 +38,8 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
       ref.read(salesHistoryProvider.notifier).fetchNextPage();
     }
   }
@@ -51,7 +52,8 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
   Widget build(BuildContext context) {
     final SalesHistoryState salesState = ref.watch(salesHistoryProvider);
     final List<Sale> sales = salesState.sales;
-    final bool isLoadingInitial = salesState.isLoading && sales.isEmpty && salesState.error == null;
+    final bool isLoadingInitial =
+        salesState.isLoading && sales.isEmpty && salesState.error == null;
     final bool isLoadingMore = salesState.isLoading && sales.isNotEmpty;
     final bool hasError = salesState.error != null && !salesState.isLoading;
 
@@ -64,9 +66,17 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
         onRefresh: _handleRefresh,
         child: Stack(
           children: [
-            _buildSalesList(context, salesState, sales, isLoadingInitial, currencyFormat, dateFormat),
+            _buildSalesList(
+              context,
+              salesState,
+              sales,
+              isLoadingInitial,
+              currencyFormat,
+              dateFormat,
+            ),
 
-            if (hasError && sales.isEmpty) _buildErrorWidget(context, salesState.error),
+            if (hasError && sales.isEmpty)
+              _buildErrorWidget(context, salesState.error),
           ],
         ),
       ),
@@ -90,8 +100,11 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
           itemCount: 8, // Показываем несколько плейсхолдеров
           itemBuilder:
               (_, __) => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 2.0), // Небольшой отступ
-                child: SalesHistoryListItemPlaceholder(), // Используем плейсхолдер истории
+                padding: EdgeInsets.symmetric(
+                  vertical: 2.0,
+                ), // Небольшой отступ
+                child:
+                    SalesHistoryListItemPlaceholder(), // Используем плейсхолдер истории
               ),
         ),
       );
@@ -105,12 +118,18 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
             // Добавляем иконку
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.history_toggle_off_outlined, size: 60, color: Colors.grey[400]),
+              Icon(
+                Icons.history_toggle_off_outlined,
+                size: 60,
+                color: Colors.grey[400],
+              ),
               const SizedBox(height: 16),
               Text(
                 'История продаж пуста.',
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
               ),
             ],
           ),
@@ -120,9 +139,16 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
 
     return ListView.separated(
       controller: _scrollController,
-      itemCount: sales.length + (salesState.isLoading && sales.isNotEmpty ? 1 : 0),
+      itemCount:
+          sales.length + (salesState.isLoading && sales.isNotEmpty ? 1 : 0),
       padding: const EdgeInsets.only(bottom: 16, top: 8),
-      separatorBuilder: (context, index) => Divider(height: 1, thickness: 0.5, indent: 72, color: Colors.grey.shade300),
+      separatorBuilder:
+          (context, index) => Divider(
+            height: 1,
+            thickness: 0.5,
+            indent: 72,
+            color: Colors.grey.shade300,
+          ),
       itemBuilder: (context, index) {
         if (index == sales.length) {
           return const Padding(
@@ -138,7 +164,13 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
         );
 
         return ListTile(
-          leading: CircleAvatar(child: Text(sale.orderId.length > 2 ? sale.orderId.substring(0, 2) : sale.orderId)),
+          leading: CircleAvatar(
+            child: Text(
+              sale.orderId.length > 2
+                  ? sale.orderId.substring(0, 2)
+                  : sale.orderId,
+            ),
+          ),
           title: Text('Заказ № ${sale.orderId}'),
           subtitle: Text(
             'Дата: ${dateFormat.format(sale.createdAt.toLocal())}\n'
@@ -148,7 +180,13 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
           isThreeLine: true,
           trailing: const Icon(Icons.chevron_right),
           onTap: () {
-            _showSaleDetailsDialog(context, ref, sale, currencyFormat, dateFormat);
+            _showSaleDetailsDialog(
+              context,
+              ref,
+              sale,
+              currencyFormat,
+              dateFormat,
+            );
           },
         );
       },
@@ -162,12 +200,19 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.cloud_off, color: Colors.red, size: 60), // Иконка ошибки сети/сервера
+            const Icon(
+              Icons.cloud_off,
+              color: Colors.red,
+              size: 60,
+            ), // Иконка ошибки сети/сервера
             const SizedBox(height: 16),
             Text(
               'Ошибка загрузки товаров:\n${_formatErrorMessage(error)}',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 15), // Чуть крупнее
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: 15,
+              ), // Чуть крупнее
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
@@ -205,7 +250,9 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
       builder: (BuildContext dialogContext) {
         return Consumer(
           builder: (context, dialogRef, child) {
-            final AsyncValue<List<SaleItem>> detailsAsync = dialogRef.watch(saleDetailsProvider(sale.orderId));
+            final AsyncValue<List<SaleItem>> detailsAsync = dialogRef.watch(
+              saleDetailsProvider(sale.orderId),
+            );
 
             final paymentMethod = PaymentMethod.values.firstWhere(
               (e) => e.name == sale.paymentMethod,
@@ -220,12 +267,16 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                 width: double.maxFinite,
 
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.6),
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.6,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Дата: ${dateFormat.format(sale.createdAt.toLocal())}'),
+                      Text(
+                        'Дата: ${dateFormat.format(sale.createdAt.toLocal())}',
+                      ),
                       Text('Сумма: ${currencyFormat.format(sale.totalAmount)}'),
                       Text('Метод оплаты: ${paymentMethod.displayTitle}'),
                       Text('Статус: ${sale.status}'),
@@ -235,7 +286,9 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                         child: detailsAsync.when(
                           data: (items) {
                             if (items.isEmpty) {
-                              return const Center(child: Text('Позиции не найдены.'));
+                              return const Center(
+                                child: Text('Позиции не найдены.'),
+                              );
                             }
                             return ListView.builder(
                               shrinkWrap: true,
@@ -245,20 +298,29 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                                 return ListTile(
                                   dense: true,
                                   contentPadding: EdgeInsets.zero,
-                                  title: Text(item.skuName, style: const TextStyle(fontSize: 14)),
+                                  title: Text(
+                                    item.skuName,
+                                    style: const TextStyle(fontSize: 14),
+                                  ),
                                   subtitle: Text(
                                     '${item.quantity} шт. x ${currencyFormat.format(item.price)}',
                                     style: const TextStyle(fontSize: 12),
                                   ),
                                   trailing: Text(
                                     currencyFormat.format(item.total),
-                                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
                                   ),
                                 );
                               },
                             );
                           },
-                          loading: () => const Center(child: CircularProgressIndicator()),
+                          loading:
+                              () => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
                           error:
                               (error, stack) => Center(
                                 child: Text(
@@ -273,7 +335,10 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                 ),
               ),
               actions: <Widget>[
-                TextButton(child: const Text('Закрыть'), onPressed: () => Navigator.of(dialogContext).pop()),
+                TextButton(
+                  child: const Text('Закрыть'),
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                ),
 
                 TextButton(
                   child: const Text('Печать/Просмотр'),
@@ -281,7 +346,9 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                       (saleItems == null || saleItems.isEmpty)
                           ? null
                           : () async {
-                            final scaffoldMessenger = ScaffoldMessenger.of(context);
+                            final scaffoldMessenger = ScaffoldMessenger.of(
+                              context,
+                            );
 
                             if (!context.mounted) return;
 
@@ -302,7 +369,10 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                             Object? pdfError;
 
                             try {
-                              pdfBytes = await generateReceiptPdf(sale, saleItems!);
+                              pdfBytes = await generateReceiptPdf(
+                                sale,
+                                saleItems!,
+                              );
                             } catch (e) {
                               pdfError = e;
                             }
@@ -314,27 +384,36 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                             if (pdfBytes != null) {
                               try {
                                 await Printing.layoutPdf(
-                                  onLayout: (PdfPageFormat format) async => pdfBytes!,
+                                  onLayout:
+                                      (PdfPageFormat format) async => pdfBytes!,
                                   name: 'receipt_${sale.orderId}.pdf',
                                 );
 
-                                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                                if (dialogContext.mounted)
+                                  Navigator.of(dialogContext).pop();
                               } catch (printError) {
                                 scaffoldMessenger.showSnackBar(
-                                  SnackBar(content: Text('Ошибка печати: $printError'), backgroundColor: Colors.red),
+                                  SnackBar(
+                                    content: Text('Ошибка печати: $printError'),
+                                    backgroundColor: Colors.red,
+                                  ),
                                 );
 
-                                if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                                if (dialogContext.mounted)
+                                  Navigator.of(dialogContext).pop();
                               }
                             } else if (pdfError != null) {
                               scaffoldMessenger.showSnackBar(
                                 SnackBar(
-                                  content: Text('Ошибка при генерации чека:\n${_formatErrorMessage(pdfError)}'),
+                                  content: Text(
+                                    'Ошибка при генерации чека:\n${_formatErrorMessage(pdfError)}',
+                                  ),
                                   backgroundColor: Colors.red,
                                 ),
                               );
 
-                              if (dialogContext.mounted) Navigator.of(dialogContext).pop();
+                              if (dialogContext.mounted)
+                                Navigator.of(dialogContext).pop();
                             }
                           },
                 ),
