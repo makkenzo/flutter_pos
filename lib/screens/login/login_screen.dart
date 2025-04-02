@@ -86,7 +86,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(bottom: 40.0),
-                    child: Icon(Icons.point_of_sale, size: 80, color: Theme.of(context).colorScheme.primary),
+                    child: Icon(
+                      Icons.point_of_sale,
+                      size: 80,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
 
                   TextFormField(
@@ -97,7 +101,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       prefixIcon: const Icon(Icons.person_outline),
                       border: const OutlineInputBorder(),
                       filled: true,
-                      fillColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.04),
+                      fillColor: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.04),
                     ),
                     keyboardType: TextInputType.text,
                     textInputAction: TextInputAction.next,
@@ -113,10 +119,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       prefixIcon: const Icon(Icons.lock_outline),
                       border: const OutlineInputBorder(),
                       filled: true,
-                      fillColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.04),
+                      fillColor: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.04),
                       suffixIcon: IconButton(
-                        icon: Icon(_isPasswordVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
-                        tooltip: _isPasswordVisible ? 'Скрыть пароль' : 'Показать пароль',
+                        icon: Icon(
+                          _isPasswordVisible
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                        ),
+                        tooltip:
+                            _isPasswordVisible
+                                ? 'Скрыть пароль'
+                                : 'Показать пароль',
                         onPressed:
                             isLoading
                                 ? null
@@ -144,15 +159,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      textStyle: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ).copyWith(
-                      backgroundColor: MaterialStateProperty.resolveWith<Color?>((Set<MaterialState> states) {
-                        if (states.contains(MaterialState.disabled)) {
-                          return Theme.of(context).colorScheme.primary.withOpacity(0.5);
-                        }
-                        return null;
-                      }),
+                      backgroundColor:
+                          MaterialStateProperty.resolveWith<Color?>((
+                            Set<MaterialState> states,
+                          ) {
+                            if (states.contains(MaterialState.disabled)) {
+                              return Theme.of(
+                                context,
+                              ).colorScheme.primary.withOpacity(0.5);
+                            }
+                            return null;
+                          }),
                     ),
 
                     icon:

@@ -29,9 +29,15 @@ class PaginatedResponse<T> {
     required this.content,
   });
 
-  factory PaginatedResponse.fromJson(Map<String, dynamic> json, T Function(Map<String, dynamic>) fromJsonT) {
+  factory PaginatedResponse.fromJson(
+    Map<String, dynamic> json,
+    T Function(Map<String, dynamic>) fromJsonT,
+  ) {
     final contentList = json['content'] as List? ?? [];
-    final items = contentList.map((itemJson) => fromJsonT(itemJson as Map<String, dynamic>)).toList();
+    final items =
+        contentList
+            .map((itemJson) => fromJsonT(itemJson as Map<String, dynamic>))
+            .toList();
 
     try {
       return PaginatedResponse<T>(
@@ -56,7 +62,9 @@ class ApiService {
   final String _baseUrl = "https://pos-api.makkenzo.com";
   final StorageService _storageService = StorageService();
 
-  Future<Map<String, String>> _getAuthHeaders({bool includeContentType = true}) async {
+  Future<Map<String, String>> _getAuthHeaders({
+    bool includeContentType = true,
+  }) async {
     String? token = await _storageService.getToken();
     final headers = <String, String>{};
     if (includeContentType) {
@@ -69,7 +77,8 @@ class ApiService {
   }
 
   Exception _handleHttpError(http.Response response, String operation) {
-    String errorMessage = '$operation failed with status code ${response.statusCode}.';
+    String errorMessage =
+        '$operation failed with status code ${response.statusCode}.';
     try {
       final body = jsonDecode(response.body);
       if (body['message'] != null) {
@@ -96,7 +105,10 @@ class ApiService {
           .post(
             loginUri,
             headers: await _getAuthHeaders(),
-            body: jsonEncode(<String, String>{'username': username, 'password': password}),
+            body: jsonEncode(<String, String>{
+              'username': username,
+              'password': password,
+            }),
           )
           .timeout(const Duration(seconds: 15));
 
@@ -171,13 +183,18 @@ class ApiService {
       queryParams['max_price'] = maxPrice.toString();
     }
 
-    final Uri productsUri = Uri.parse('$_baseUrl/products/local/').replace(queryParameters: queryParams);
+    final Uri productsUri = Uri.parse(
+      '$_baseUrl/products/local/',
+    ).replace(queryParameters: queryParams);
 
     print('Fetching products from: $productsUri');
 
     try {
       final response = await http
-          .get(productsUri, headers: await _getAuthHeaders(includeContentType: false))
+          .get(
+            productsUri,
+            headers: await _getAuthHeaders(includeContentType: false),
+          )
           .timeout(const Duration(seconds: 20));
 
       print('Get products response status: ${response.statusCode}');
@@ -189,7 +206,9 @@ class ApiService {
           return PaginatedResponse.fromJson(body, Product.fromJson);
         } catch (e) {
           print('Get products error parsing response: $e');
-          throw Exception('Ошибка обработки ответа сервера при получении продуктов.');
+          throw Exception(
+            'Ошибка обработки ответа сервера при получении продуктов.',
+          );
         }
       } else {
         throw _handleHttpError(response, 'Get products');
@@ -203,18 +222,25 @@ class ApiService {
     } catch (e) {
       print('Get products unexpected error: $e');
       if (e is Exception) rethrow;
-      throw Exception('Неизвестная ошибка при получении продуктов: ${e.runtimeType}');
+      throw Exception(
+        'Неизвестная ошибка при получении продуктов: ${e.runtimeType}',
+      );
     }
   }
 
   Future<Product?> getProductByBarcode(String barcode) async {
     if (barcode.isEmpty) return null;
-    final Uri productUri = Uri.parse('$_baseUrl/products/global/by-barcode/$barcode');
+    final Uri productUri = Uri.parse(
+      '$_baseUrl/products/global/by-barcode/$barcode',
+    );
     print('Fetching product by barcode: $productUri');
 
     try {
       final response = await http
-          .get(productUri, headers: await _getAuthHeaders(includeContentType: false))
+          .get(
+            productUri,
+            headers: await _getAuthHeaders(includeContentType: false),
+          )
           .timeout(const Duration(seconds: 10));
 
       print('Get product by barcode status: ${response.statusCode}');
@@ -252,7 +278,11 @@ class ApiService {
 
     try {
       final response = await http
-          .post(productsUri, headers: await _getAuthHeaders(), body: jsonEncode(product.toJsonForCreate()))
+          .post(
+            productsUri,
+            headers: await _getAuthHeaders(),
+            body: jsonEncode(product.toJsonForCreate()),
+          )
           .timeout(const Duration(seconds: 15));
 
       print('Add product response status: ${response.statusCode}');
@@ -263,7 +293,9 @@ class ApiService {
           return Product.fromJson(body);
         } catch (e) {
           print('Add product error parsing response: $e');
-          throw Exception('Ошибка обработки ответа сервера после добавления продукта.');
+          throw Exception(
+            'Ошибка обработки ответа сервера после добавления продукта.',
+          );
         }
       } else {
         throw _handleHttpError(response, 'Add product');
@@ -277,7 +309,9 @@ class ApiService {
     } catch (e) {
       print('Add product unexpected error: $e');
       if (e is Exception) rethrow;
-      throw Exception('Неизвестная ошибка при добавлении продукта: ${e.runtimeType}');
+      throw Exception(
+        'Неизвестная ошибка при добавлении продукта: ${e.runtimeType}',
+      );
     }
   }
 
@@ -287,7 +321,11 @@ class ApiService {
 
     try {
       final response = await http
-          .put(productUri, headers: await _getAuthHeaders(), body: jsonEncode(product.toJsonForUpdate()))
+          .put(
+            productUri,
+            headers: await _getAuthHeaders(),
+            body: jsonEncode(product.toJsonForUpdate()),
+          )
           .timeout(const Duration(seconds: 15));
 
       print('Update product response status: ${response.statusCode}');
@@ -298,7 +336,9 @@ class ApiService {
           return Product.fromJson(body);
         } catch (e) {
           print('Update product error parsing response: $e');
-          throw Exception('Ошибка обработки ответа сервера после обновления продукта.');
+          throw Exception(
+            'Ошибка обработки ответа сервера после обновления продукта.',
+          );
         }
       } else {
         throw _handleHttpError(response, 'Update product $productId');
@@ -312,7 +352,9 @@ class ApiService {
     } catch (e) {
       print('Update product unexpected error: $e');
       if (e is Exception) rethrow;
-      throw Exception('Неизвестная ошибка при обновлении продукта: ${e.runtimeType}');
+      throw Exception(
+        'Неизвестная ошибка при обновлении продукта: ${e.runtimeType}',
+      );
     }
   }
 
@@ -322,7 +364,10 @@ class ApiService {
 
     try {
       final response = await http
-          .delete(productUri, headers: await _getAuthHeaders(includeContentType: false))
+          .delete(
+            productUri,
+            headers: await _getAuthHeaders(includeContentType: false),
+          )
           .timeout(const Duration(seconds: 15));
 
       print('Delete product response status: ${response.statusCode}');
@@ -339,11 +384,17 @@ class ApiService {
     } catch (e) {
       print('Delete product unexpected error: $e');
       if (e is Exception) rethrow;
-      throw Exception('Неизвестная ошибка при удалении продукта: ${e.runtimeType}');
+      throw Exception(
+        'Неизвестная ошибка при удалении продукта: ${e.runtimeType}',
+      );
     }
   }
 
-  Future<String> createSale(List<CartItem> cartItems, double totalAmount, PaymentMethod paymentMethod) async {
+  Future<String> createSale(
+    List<CartItem> cartItems,
+    double totalAmount,
+    PaymentMethod paymentMethod,
+  ) async {
     if (cartItems.isEmpty) {
       throw ArgumentError("Корзина не может быть пустой для создания продажи.");
     }
@@ -354,7 +405,9 @@ class ApiService {
       'sale_status': 'paid',
     };
 
-    final Uri salesUri = Uri.parse('$_baseUrl/sales/create').replace(queryParameters: queryParams);
+    final Uri salesUri = Uri.parse(
+      '$_baseUrl/sales/create',
+    ).replace(queryParameters: queryParams);
 
     final List<Map<String, dynamic>> itemsBody =
         cartItems.map((item) {
@@ -371,7 +424,11 @@ class ApiService {
 
     try {
       final response = await http
-          .post(salesUri, headers: await _getAuthHeaders(), body: jsonEncode(itemsBody))
+          .post(
+            salesUri,
+            headers: await _getAuthHeaders(),
+            body: jsonEncode(itemsBody),
+          )
           .timeout(const Duration(seconds: 25));
 
       print('Create sale response status: ${response.statusCode}');
@@ -389,7 +446,9 @@ class ApiService {
           }
         } catch (e) {
           print('Create sale error parsing response: $e');
-          throw Exception('Ошибка обработки ответа сервера после создания продажи.');
+          throw Exception(
+            'Ошибка обработки ответа сервера после создания продажи.',
+          );
         }
       } else if (response.statusCode == 422) {
         print('Create sale failed with 422: ${response.body}');
@@ -399,7 +458,10 @@ class ApiService {
 
           if (body['detail'] is List && body['detail'].isNotEmpty) {
             detailMessage = (body['detail'] as List)
-                .map((err) => "Поле: ${err['loc']?.join('.') ?? 'N/A'}, Сообщение: ${err['msg'] ?? 'N/A'}")
+                .map(
+                  (err) =>
+                      "Поле: ${err['loc']?.join('.') ?? 'N/A'}, Сообщение: ${err['msg'] ?? 'N/A'}",
+                )
                 .join('; ');
           } else if (body['detail'] != null) {
             detailMessage = body['detail'].toString();
@@ -418,20 +480,35 @@ class ApiService {
     } catch (e) {
       print('Create sale unexpected error: $e');
       if (e is Exception) rethrow;
-      throw Exception('Неизвестная ошибка при создании продажи: ${e.runtimeType}');
+      throw Exception(
+        'Неизвестная ошибка при создании продажи: ${e.runtimeType}',
+      );
     }
   }
 
-  Future<PaginatedResponse<Sale>> getSalesHistory({int skip = 0, int limit = 20, String sortOrder = 'desc'}) async {
-    final queryParams = <String, String>{'skip': skip.toString(), 'limit': limit.toString(), 'sort_order': sortOrder};
+  Future<PaginatedResponse<Sale>> getSalesHistory({
+    int skip = 0,
+    int limit = 20,
+    String sortOrder = 'desc',
+  }) async {
+    final queryParams = <String, String>{
+      'skip': skip.toString(),
+      'limit': limit.toString(),
+      'sort_order': sortOrder,
+    };
 
-    final Uri salesUri = Uri.parse('$_baseUrl/sales/').replace(queryParameters: queryParams);
+    final Uri salesUri = Uri.parse(
+      '$_baseUrl/sales/',
+    ).replace(queryParameters: queryParams);
 
     print('Fetching sales history from: $salesUri');
 
     try {
       final response = await http
-          .get(salesUri, headers: await _getAuthHeaders(includeContentType: false))
+          .get(
+            salesUri,
+            headers: await _getAuthHeaders(includeContentType: false),
+          )
           .timeout(const Duration(seconds: 20));
 
       print('Get sales history response status: ${response.statusCode}');
@@ -443,7 +520,9 @@ class ApiService {
           return PaginatedResponse.fromJson(body, Sale.fromJson);
         } catch (e) {
           print('Get sales history error parsing response: $e');
-          throw Exception('Ошибка обработки ответа сервера при получении истории продаж.');
+          throw Exception(
+            'Ошибка обработки ответа сервера при получении истории продаж.',
+          );
         }
       } else {
         throw _handleHttpError(response, 'Get sales history');
@@ -457,7 +536,9 @@ class ApiService {
     } catch (e) {
       print('Get sales history unexpected error: $e');
       if (e is Exception) rethrow;
-      throw Exception('Неизвестная ошибка при получении истории продаж: ${e.runtimeType}');
+      throw Exception(
+        'Неизвестная ошибка при получении истории продаж: ${e.runtimeType}',
+      );
     }
   }
 
@@ -467,7 +548,10 @@ class ApiService {
 
     try {
       final response = await http
-          .get(saleItemsUri, headers: await _getAuthHeaders(includeContentType: false))
+          .get(
+            saleItemsUri,
+            headers: await _getAuthHeaders(includeContentType: false),
+          )
           .timeout(const Duration(seconds: 15));
 
       print('Get sale items response status: ${response.statusCode}');
@@ -475,9 +559,13 @@ class ApiService {
       if (response.statusCode == 200) {
         try {
           final body = jsonDecode(utf8.decode(response.bodyBytes));
-          if (body is Map && body.containsKey('items') && body['items'] is List) {
+          if (body is Map &&
+              body.containsKey('items') &&
+              body['items'] is List) {
             List<dynamic> itemsList = body['items'];
-            return itemsList.map((dynamic item) => SaleItem.fromJson(item)).toList();
+            return itemsList
+                .map((dynamic item) => SaleItem.fromJson(item))
+                .toList();
           } else if (body is List) {
             return body.map((dynamic item) => SaleItem.fromJson(item)).toList();
           } else {
@@ -485,7 +573,9 @@ class ApiService {
           }
         } catch (e) {
           print('Get sale items error parsing response: $e');
-          throw Exception('Ошибка обработки ответа сервера при получении деталей продажи.');
+          throw Exception(
+            'Ошибка обработки ответа сервера при получении деталей продажи.',
+          );
         }
       } else {
         throw _handleHttpError(response, 'Get sale items for order $orderId');
@@ -499,7 +589,9 @@ class ApiService {
     } catch (e) {
       print('Get sale items unexpected error: $e');
       if (e is Exception) rethrow;
-      throw Exception('Неизвестная ошибка при получении деталей продажи: ${e.runtimeType}');
+      throw Exception(
+        'Неизвестная ошибка при получении деталей продажи: ${e.runtimeType}',
+      );
     }
   }
 }

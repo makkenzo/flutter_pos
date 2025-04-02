@@ -5,9 +5,10 @@ import 'package:flutter_pos/providers/cart_provider.dart';
 import 'package:flutter_pos/services/api_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final saleNotifierProvider = StateNotifierProvider<SaleNotifier, AsyncValue<String?>>((ref) {
-  return SaleNotifier(ref);
-});
+final saleNotifierProvider =
+    StateNotifierProvider<SaleNotifier, AsyncValue<String?>>((ref) {
+      return SaleNotifier(ref);
+    });
 
 class SaleNotifier extends StateNotifier<AsyncValue<String?>> {
   final Ref _ref;
@@ -27,7 +28,11 @@ class SaleNotifier extends StateNotifier<AsyncValue<String?>> {
     try {
       final apiService = _ref.read(apiServiceProvider);
       // --- ИЗМЕНЕНО: Получаем orderId (String) ---
-      final String createdOrderId = await apiService.createSale(cart.items, cart.totalPrice, paymentMethod);
+      final String createdOrderId = await apiService.createSale(
+        cart.items,
+        cart.totalPrice,
+        paymentMethod,
+      );
       // -------------------------------------------
 
       // --- ИЗМЕНЕНО: Сохраняем orderId в состоянии ---

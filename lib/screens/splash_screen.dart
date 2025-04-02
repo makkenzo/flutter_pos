@@ -9,7 +9,11 @@ class SplashScreen extends StatelessWidget {
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [CircularProgressIndicator(), SizedBox(height: 20), Text("Загрузка...")],
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 20),
+            Text("Загрузка..."),
+          ],
         ),
       ),
     );

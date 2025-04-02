@@ -4,6 +4,7 @@ import 'package:flutter_pos/screens/login/login_screen.dart';
 import 'package:flutter_pos/screens/products/product_list_screen.dart';
 import 'package:flutter_pos/screens/splash_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
@@ -24,7 +25,20 @@ class MyApp extends ConsumerWidget {
 
     return MaterialApp(
       title: 'Flutter POS',
-      theme: ThemeData(colorSchemeSeed: Colors.indigo, useMaterial3: true, brightness: Brightness.light),
+      theme: ThemeData(
+        colorSchemeSeed: Colors.blueAccent,
+        useMaterial3: true,
+        brightness: Brightness.light,
+        textTheme: GoogleFonts.robotoTextTheme(Theme.of(context).textTheme),
+      ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorSchemeSeed: Colors.blueAccent,
+        brightness: Brightness.dark,
+        textTheme: GoogleFonts.robotoTextTheme(Theme.of(context).textTheme),
+      ),
+
+      themeMode: ThemeMode.light,
       locale: const Locale('ru', 'RU'),
       supportedLocales: const [Locale('ru', 'RU')],
       localizationsDelegates: const [

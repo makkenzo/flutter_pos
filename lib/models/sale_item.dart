@@ -30,7 +30,9 @@ class SaleItem {
         saleId: (json['sale_id'] as num?)?.toInt() ?? -1,
         productId: (json['product_id'] as num?)?.toInt() ?? -1,
         // --- ИЗМЕНЕНО: Строковое поле skuName с проверкой на null ---
-        skuName: json['sku_name'] as String? ?? 'Неизвестный товар', // Значение по умолчанию
+        skuName:
+            json['sku_name'] as String? ??
+            'Неизвестный товар', // Значение по умолчанию
         // -----------------------------------------------------------
         quantity: (json['quantity'] as num?)?.toInt() ?? 0,
         price: (json['price'] as num?)?.toDouble() ?? 0.0,

@@ -43,9 +43,10 @@ class ProductListState {
   }
 }
 
-final productListProvider = StateNotifierProvider<ProductListNotifier, ProductListState>((ref) {
-  return ProductListNotifier(ref);
-});
+final productListProvider =
+    StateNotifierProvider<ProductListNotifier, ProductListState>((ref) {
+      return ProductListNotifier(ref);
+    });
 
 class ProductListNotifier extends StateNotifier<ProductListState> {
   final Ref _ref;
@@ -53,7 +54,8 @@ class ProductListNotifier extends StateNotifier<ProductListState> {
 
   ProductListNotifier(this._ref) : super(const ProductListState()) {
     _ref.listen<AuthState>(authProvider, (prev, next) {
-      if (prev?.status != AuthStatus.authenticated && next.status == AuthStatus.authenticated) {
+      if (prev?.status != AuthStatus.authenticated &&
+          next.status == AuthStatus.authenticated) {
         refresh();
       }
     });
@@ -63,23 +65,33 @@ class ProductListNotifier extends StateNotifier<ProductListState> {
   }
 
   Future<void> fetchProducts({bool isRefresh = false, String? query}) async {
-    if (state.isLoading || (state.hasReachedMax && !isRefresh && query == state.currentQuery)) return;
+    if (state.isLoading ||
+        (state.hasReachedMax && !isRefresh && query == state.currentQuery))
+      return;
 
     state = state.copyWith(isLoading: true, error: null, clearError: true);
 
-    int pageToFetch = isRefresh || query != state.currentQuery ? 0 : state.currentPage;
+    int pageToFetch =
+        isRefresh || query != state.currentQuery ? 0 : state.currentPage;
     int skip = pageToFetch * _limit;
     String? fetchQuery = query ?? state.currentQuery;
 
     try {
       final apiService = _ref.read(apiServiceProvider);
-      final paginatedResponse = await apiService.getProducts(skip: skip, limit: _limit, searchQuery: fetchQuery);
+      final paginatedResponse = await apiService.getProducts(
+        skip: skip,
+        limit: _limit,
+        searchQuery: fetchQuery,
+      );
 
       final newProducts = paginatedResponse.content;
       final bool isLastPage = paginatedResponse.isLast;
 
       state = state.copyWith(
-        products: (pageToFetch == 0) ? newProducts : [...state.products, ...newProducts],
+        products:
+            (pageToFetch == 0)
+                ? newProducts
+                : [...state.products, ...newProducts],
         isLoading: false,
         hasReachedMax: isLastPage,
         currentPage: pageToFetch + 1,
@@ -101,7 +113,10 @@ class ProductListNotifier extends StateNotifier<ProductListState> {
   }
 
   Future<void> search(String query) async {
-    await fetchProducts(isRefresh: true, query: query.isNotEmpty ? query : null);
+    await fetchProducts(
+      isRefresh: true,
+      query: query.isNotEmpty ? query : null,
+    );
   }
 
   Future<void> refresh() async {
@@ -117,9 +132,12 @@ class ProductListNotifier extends StateNotifier<ProductListState> {
   }
 }
 
-final productFormNotifierProvider = StateNotifierProvider.autoDispose<ProductFormNotifier, AsyncValue<void>>((ref) {
-  return ProductFormNotifier(ref);
-});
+final productFormNotifierProvider =
+    StateNotifierProvider.autoDispose<ProductFormNotifier, AsyncValue<void>>((
+      ref,
+    ) {
+      return ProductFormNotifier(ref);
+    });
 
 class ProductFormNotifier extends StateNotifier<AsyncValue<void>> {
   final Ref _ref;
@@ -193,21 +211,22 @@ class ProductFormNotifier extends StateNotifier<AsyncValue<void>> {
   }
 }
 
-final productByBarcodeProvider = FutureProvider.autoDispose.family<Product?, String>((ref, barcode) async {
-  if (barcode.isEmpty) {
-    return null;
-  }
+final productByBarcodeProvider = FutureProvider.autoDispose
+    .family<Product?, String>((ref, barcode) async {
+      if (barcode.isEmpty) {
+        return null;
+      }
 
-  final apiService = ref.watch(apiServiceProvider);
-  try {
-    final product = await apiService.getProductByBarcode(barcode);
-    return product;
-  } on UnauthorizedException {
-    ref.read(authProvider.notifier).logout();
+      final apiService = ref.watch(apiServiceProvider);
+      try {
+        final product = await apiService.getProductByBarcode(barcode);
+        return product;
+      } on UnauthorizedException {
+        ref.read(authProvider.notifier).logout();
 
-    return null;
-  } catch (e) {
-    print("Error fetching product by barcode $barcode: $e");
-    return null;
-  }
-});
+        return null;
+      } catch (e) {
+        print("Error fetching product by barcode $barcode: $e");
+        return null;
+      }
+    });

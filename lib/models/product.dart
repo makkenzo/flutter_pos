@@ -44,7 +44,9 @@ class Product {
     try {
       return Product(
         // Используем безопасное преобразование num -> int
-        id: (json['id'] as num?)?.toInt() ?? -1, // Используем -1 как индикатор ошибки/null
+        id:
+            (json['id'] as num?)?.toInt() ??
+            -1, // Используем -1 как индикатор ошибки/null
         skuCode: json['sku_code'] as String? ?? '',
         barcode: json['barcode'] as String? ?? '',
         unit: json['unit'] as String? ?? 'шт',
@@ -60,8 +62,12 @@ class Product {
         // Используем безопасное преобразование num -> int
         quantity: (json['quantity'] as num?)?.toInt() ?? 0,
         // Парсинг дат с проверкой на null
-        createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
-        updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? '') ?? DateTime.now(),
+        createdAt:
+            DateTime.tryParse(json['created_at'] as String? ?? '') ??
+            DateTime.now(),
+        updatedAt:
+            DateTime.tryParse(json['updated_at'] as String? ?? '') ??
+            DateTime.now(),
       );
     } catch (e, stackTrace) {
       // Добавим stackTrace

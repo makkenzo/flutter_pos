@@ -56,7 +56,8 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
       ref.read(productListProvider.notifier).fetchNextPage();
     }
   }
@@ -75,10 +76,14 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   Widget build(BuildContext context) {
     final ProductListState productState = ref.watch(productListProvider);
     final List<Product> products = productState.products;
-    final bool isLoadingInitial = productState.isLoading && products.isEmpty && productState.error == null;
+    final bool isLoadingInitial =
+        productState.isLoading &&
+        products.isEmpty &&
+        productState.error == null;
     final bool isLoadingMore = productState.isLoading && products.isNotEmpty;
     final bool hasError = productState.error != null && !productState.isLoading;
-    final bool canLoadMore = !productState.isLoading && !productState.hasReachedMax;
+    final bool canLoadMore =
+        !productState.isLoading && !productState.hasReachedMax;
 
     final currencyFormat = NumberFormat.currency(locale: 'ru_RU', symbol: '₸');
 
@@ -89,12 +94,20 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           IconButton(
             icon: const Icon(Icons.history),
             tooltip: 'История продаж',
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SalesHistoryScreen())),
+            onPressed:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SalesHistoryScreen()),
+                ),
           ),
           IconButton(
             icon: const Icon(Icons.point_of_sale),
             tooltip: 'Касса',
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PosScreen())),
+            onPressed:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PosScreen()),
+                ),
           ),
           IconButton(
             icon: const Icon(Icons.logout),
@@ -105,12 +118,19 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                 builder:
                     (context) => AlertDialog(
                       title: const Text('Подтверждение выхода'),
-                      content: const Text('Вы уверены, что хотите выйти из системы?'),
+                      content: const Text(
+                        'Вы уверены, что хотите выйти из системы?',
+                      ),
                       actions: [
-                        TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Отмена')),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(false),
+                          child: const Text('Отмена'),
+                        ),
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(true),
-                          style: TextButton.styleFrom(foregroundColor: Colors.red),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.red,
+                          ),
                           child: const Text('Выйти'),
                         ),
                       ],
@@ -127,7 +147,10 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(kToolbarHeight),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12.0,
+              vertical: 8.0,
+            ),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
@@ -144,9 +167,14 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                           },
                         )
                         : null,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide.none),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30.0),
+                  borderSide: BorderSide.none,
+                ),
                 filled: true,
-                fillColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.6),
+                fillColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceVariant.withOpacity(0.6),
                 contentPadding: const EdgeInsets.symmetric(vertical: 0),
               ),
               onChanged: _onSearchChanged,
@@ -159,7 +187,13 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         onRefresh: _handleRefresh,
         child: Stack(
           children: [
-            _buildBodyContent(context, productState, products, isLoadingInitial, currencyFormat),
+            _buildBodyContent(
+              context,
+              productState,
+              products,
+              isLoadingInitial,
+              currencyFormat,
+            ),
 
             if (hasError && products.isEmpty)
               Center(
@@ -168,15 +202,24 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 50),
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.red,
+                        size: 50,
+                      ),
                       const SizedBox(height: 10),
                       Text(
                         'Ошибка загрузки товаров:\n${_formatErrorMessage(productState.error)}',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Theme.of(context).colorScheme.error),
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
                       ),
                       const SizedBox(height: 10),
-                      ElevatedButton(onPressed: _handleRefresh, child: const Text('Повторить')),
+                      ElevatedButton(
+                        onPressed: _handleRefresh,
+                        child: const Text('Повторить'),
+                      ),
                     ],
                   ),
                 ),
@@ -189,7 +232,10 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         child: const Icon(Icons.add),
         tooltip: 'Добавить товар',
         onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => ProductFormScreen(product: null)));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => ProductFormScreen(product: null)),
+          );
         },
       ),
     );
@@ -206,16 +252,21 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (products.isEmpty && !productState.isLoading && productState.error == null) {
+    if (products.isEmpty &&
+        !productState.isLoading &&
+        productState.error == null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Text(
-            productState.currentQuery != null && productState.currentQuery!.isNotEmpty
+            productState.currentQuery != null &&
+                    productState.currentQuery!.isNotEmpty
                 ? 'Товары по запросу "${productState.currentQuery}" не найдены.'
                 : 'Нет добавленных товаров.\nНажмите "+", чтобы добавить первый.',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
           ),
         ),
       );
@@ -238,7 +289,10 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
           clipBehavior: Clip.antiAlias,
           child: ListTile(
-            title: Text(product.skuName, style: const TextStyle(fontWeight: FontWeight.w500)),
+            title: Text(
+              product.skuName,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
             subtitle: Text(
               'ШК: ${product.barcode}\nОстаток: ${product.quantity} ${product.unit}',
               maxLines: 2,
@@ -262,7 +316,12 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
               ),
             ),
             onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => ProductFormScreen(product: product)));
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProductFormScreen(product: product),
+                ),
+              );
             },
             onLongPress: () => _showDeleteConfirmation(context, product),
           ),
@@ -279,9 +338,14 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           builder: (context, dialogRef, child) {
             return AlertDialog(
               title: const Text('Подтвердить удаление'),
-              content: Text('Вы уверены, что хотите удалить товар "${product.skuName}" (ID: ${product.id})?'),
+              content: Text(
+                'Вы уверены, что хотите удалить товар "${product.skuName}" (ID: ${product.id})?',
+              ),
               actions: <Widget>[
-                TextButton(child: const Text('Отмена'), onPressed: () => Navigator.of(ctx).pop()),
+                TextButton(
+                  child: const Text('Отмена'),
+                  onPressed: () => Navigator.of(ctx).pop(),
+                ),
                 TextButton(
                   style: TextButton.styleFrom(foregroundColor: Colors.red),
                   child: const Text('Удалить'),
@@ -297,7 +361,11 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                       ScaffoldMessenger.of(context).removeCurrentSnackBar();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(success ? 'Товар "${product.skuName}" удален' : 'Ошибка удаления товара'),
+                          content: Text(
+                            success
+                                ? 'Товар "${product.skuName}" удален'
+                                : 'Ошибка удаления товара',
+                          ),
                           backgroundColor: success ? Colors.green : Colors.red,
                         ),
                       );

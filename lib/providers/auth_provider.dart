@@ -17,14 +17,19 @@ class AuthState {
 
   const AuthState.unknown() : this._(status: AuthStatus.unknown);
 
-  const AuthState.authenticated({required String token}) : this._(status: AuthStatus.authenticated, token: token);
+  const AuthState.authenticated({required String token})
+    : this._(status: AuthStatus.authenticated, token: token);
 
-  const AuthState.unauthenticated() : this._(status: AuthStatus.unauthenticated);
+  const AuthState.unauthenticated()
+    : this._(status: AuthStatus.unauthenticated);
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is AuthState && runtimeType == other.runtimeType && status == other.status && token == other.token;
+      other is AuthState &&
+          runtimeType == other.runtimeType &&
+          status == other.status &&
+          token == other.token;
 
   @override
   int get hashCode => status.hashCode ^ token.hashCode;
@@ -39,7 +44,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   final StorageService _storageService;
   final Ref _ref;
 
-  AuthNotifier(this._apiService, this._storageService, this._ref) : super(const AuthState.unknown()) {
+  AuthNotifier(this._apiService, this._storageService, this._ref)
+    : super(const AuthState.unknown()) {
     _tryAutoLogin();
   }
 
@@ -77,12 +83,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       try {
         await _storageService.deleteToken();
       } catch (storageError) {
-        print("AuthNotifier: Error deleting token from storage during logout: $storageError");
+        print(
+          "AuthNotifier: Error deleting token from storage during logout: $storageError",
+        );
       }
     } finally {
       print("AuthNotifier: Resetting user-specific data providers...");
       _ref.read(productListProvider.notifier).reset();
-       _ref.read(salesHistoryProvider.notifier).reset();
+      _ref.read(salesHistoryProvider.notifier).reset();
       state = const AuthState.unauthenticated();
       print("AuthNotifier: State set to unauthenticated.");
     }

@@ -1,11 +1,16 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_pos/models/payment_method.dart';
 import 'package:flutter_pos/models/sale.dart';
 import 'package:flutter_pos/models/sale_item.dart';
 import 'package:flutter_pos/providers/sales_history_provider.dart';
 import 'package:flutter_pos/services/api_service.dart';
+import 'package:flutter_pos/utils/pdf_generator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
 
 class SalesHistoryScreen extends ConsumerStatefulWidget {
   const SalesHistoryScreen({super.key});
@@ -152,8 +157,19 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
     Sale sale,
     NumberFormat currencyFormat,
     DateFormat dateFormat,
-  ) {
-    showDialog(
+  ) async {
+    List<SaleItem>? saleItems;
+    Object? detailError;
+
+    try {
+      saleItems = await ref.read(saleDetailsProvider(sale.orderId).future);
+    } catch (e) {
+      detailError = e;
+    }
+
+    if (!context.mounted) return;
+
+    await showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return Consumer(
@@ -229,14 +245,44 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                 TextButton(child: const Text('Закрыть'), onPressed: () => Navigator.of(dialogContext).pop()),
 
                 TextButton(
-                  child: const Text('Печать чека'),
-                  onPressed: () {
-                    Navigator.of(dialogContext).pop();
+                  child: const Text('Печать/Просмотр'),
+                  onPressed:
+                      (saleItems == null || saleItems.isEmpty)
+                          ? null
+                          : () async {
+                            Navigator.of(dialogContext).pop();
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Печать чека для заказа № ${sale.orderId} еще не реализована')),
-                    );
-                  },
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Row(
+                                  children: [
+                                    CircularProgressIndicator(strokeWidth: 2),
+                                    SizedBox(width: 10),
+                                    Text("Генерация чека..."),
+                                  ],
+                                ),
+                                duration: Duration(seconds: 5),
+                              ),
+                            );
+
+                            try {
+                              final Uint8List pdfBytes = await generateReceiptPdf(sale, saleItems!);
+                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+                              await Printing.layoutPdf(
+                                onLayout: (PdfPageFormat format) async => pdfBytes,
+                                name: 'receipt_${sale.orderId}.pdf',
+                              );
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Ошибка при генерации чека:\n${_formatErrorMessage(e)}'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
                 ),
               ],
             );

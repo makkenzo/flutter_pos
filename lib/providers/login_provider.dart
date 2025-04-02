@@ -3,9 +3,10 @@ import 'package:flutter_pos/providers/auth_provider.dart';
 import 'package:flutter_pos/services/api_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final loginProvider = StateNotifierProvider.autoDispose<LoginNotifier, AsyncValue<void>>((ref) {
-  return LoginNotifier(ref);
-});
+final loginProvider =
+    StateNotifierProvider.autoDispose<LoginNotifier, AsyncValue<void>>((ref) {
+      return LoginNotifier(ref);
+    });
 
 class LoginNotifier extends StateNotifier<AsyncValue<void>> {
   final Ref _ref;

@@ -45,9 +45,13 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     _barcodeController = TextEditingController(text: p?.barcode ?? '');
     _unitController = TextEditingController(text: p?.unit ?? 'шт');
     _priceController = TextEditingController(text: p?.price.toString() ?? '');
-    _quantityController = TextEditingController(text: p?.quantity.toString() ?? '0');
+    _quantityController = TextEditingController(
+      text: p?.quantity.toString() ?? '0',
+    );
 
-    _costPriceController = TextEditingController(text: p?.costPrice?.toString() ?? '');
+    _costPriceController = TextEditingController(
+      text: p?.costPrice?.toString() ?? '',
+    );
     _status1cController = TextEditingController(text: p?.status1c ?? '');
     _departmentController = TextEditingController(text: p?.department ?? '');
     _groupNameController = TextEditingController(text: p?.groupName ?? '');
@@ -78,7 +82,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Пожалуйста, исправьте ошибки в форме'), backgroundColor: Colors.orange),
+        const SnackBar(
+          content: Text('Пожалуйста, исправьте ошибки в форме'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
@@ -118,16 +125,22 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
     bool success;
     if (_isEditing) {
-      success = await ref.read(productFormNotifierProvider.notifier).updateProduct(widget.product!.id, productData);
+      success = await ref
+          .read(productFormNotifierProvider.notifier)
+          .updateProduct(widget.product!.id, productData);
     } else {
-      success = await ref.read(productFormNotifierProvider.notifier).addProduct(productData);
+      success = await ref
+          .read(productFormNotifierProvider.notifier)
+          .addProduct(productData);
     }
 
     if (context.mounted) {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_isEditing ? 'Товар успешно обновлен' : 'Товар успешно добавлен'),
+            content: Text(
+              _isEditing ? 'Товар успешно обновлен' : 'Товар успешно добавлен',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -166,7 +179,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     ? Container(
                       width: 20,
                       height: 20,
-                      child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
                     )
                     : const Icon(Icons.save),
             tooltip: 'Сохранить',
@@ -188,7 +204,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 validator: _validateNotEmpty,
                 enabled: !isLoading,
               ),
-             
+
               _buildTextField(
                 controller: _barcodeController,
                 labelText: 'Штрих-код *',
@@ -203,13 +219,17 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 validator: _validateNotEmpty,
                 enabled: !isLoading,
               ),
-               _buildTextField(
+              _buildTextField(
                 controller: _costPriceController,
                 labelText: 'Себестоимость *',
                 icon: Icons.price_change_outlined,
                 prefixText: '₸ ',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                ],
                 validator: _validatePositiveNumber,
                 enabled: !isLoading,
               ),
@@ -218,8 +238,12 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 labelText: 'Цена продажи *',
                 icon: Icons.sell_outlined,
                 prefixText: '₸ ',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
+                ],
                 validator: _validatePositiveNumber,
                 enabled: !isLoading,
               ),
@@ -233,11 +257,17 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 enabled: !isLoading,
               ),
 
-              const Padding(padding: EdgeInsets.symmetric(vertical: 16.0), child: Divider(thickness: 1)),
-              Text('Дополнительная информация (необязательно)', style: Theme.of(context).textTheme.titleSmall),
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16.0),
+                child: Divider(thickness: 1),
+              ),
+              Text(
+                'Дополнительная информация (необязательно)',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
               const SizedBox(height: 10),
 
-               _buildTextField(
+              _buildTextField(
                 controller: _skuCodeController,
                 labelText: 'SKU',
                 icon: Icons.inventory_2_outlined,
@@ -245,7 +275,6 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 enabled: !isLoading,
               ),
 
-             
               _buildTextField(
                 controller: _supplierController,
                 labelText: 'Поставщик',
@@ -257,12 +286,21 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  textStyle: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ).copyWith(
-                  backgroundColor: MaterialStateProperty.resolveWith<Color?>((Set<MaterialState> states) {
+                  backgroundColor: MaterialStateProperty.resolveWith<Color?>((
+                    Set<MaterialState> states,
+                  ) {
                     if (states.contains(MaterialState.disabled))
-                      return Theme.of(context).colorScheme.primary.withOpacity(0.5);
+                      return Theme.of(
+                        context,
+                      ).colorScheme.primary.withOpacity(0.5);
                     return null;
                   }),
                 ),
@@ -271,7 +309,10 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                         ? Container(
                           width: 20,
                           height: 20,
-                          child: const CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: Colors.white,
+                          ),
                         )
                         : const Icon(Icons.save, size: 22),
                 label: Text(isLoading ? 'СОХРАНЕНИЕ...' : 'СОХРАНИТЬ'),

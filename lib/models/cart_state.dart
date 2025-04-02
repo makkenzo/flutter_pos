@@ -27,7 +27,9 @@ class CartState {
   }
 
   CartState updateItem(CartItem itemToUpdate) {
-    final index = items.indexWhere((item) => item.barcode == itemToUpdate.barcode);
+    final index = items.indexWhere(
+      (item) => item.barcode == itemToUpdate.barcode,
+    );
     final newItems = List<CartItem>.from(items);
 
     if (index != -1) {
