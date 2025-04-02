@@ -354,12 +354,12 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
                 return GridView.builder(
                   controller: _productScrollController,
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.all(12.0),
                   gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 200,
-                    childAspectRatio: 2 / 2.8,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
+                    maxCrossAxisExtent: 220,
+                    childAspectRatio: 0.9,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
                   ),
                   itemCount: products.length + (isLoadingMore ? 1 : 0),
                   itemBuilder: (context, index) {
@@ -381,47 +381,50 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   Widget _buildProductTile(Product product) {
     final currencyFormat = NumberFormat.currency(locale: 'ru_RU', symbol: '₸');
     bool inStock = product.quantity > 0;
+    final theme = Theme.of(context);
 
     return Card(
       clipBehavior: Clip.antiAlias,
-      elevation: 2.0,
+      elevation: inStock ? 3.0 : 1.0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
       child: InkWell(
         onTap: inStock ? () => _addProductToCart(product) : null,
-
         child: Opacity(
-          opacity: inStock ? 1.0 : 0.4,
-          child: GridTile(
-            footer: GridTileBar(
-              backgroundColor: Colors.black54,
-              title: Text(
-                currencyFormat.format(product.price),
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-              ),
-              trailing:
-                  inStock ? null : const Icon(Icons.remove_shopping_cart_outlined, size: 18, color: Colors.white70),
-            ),
+          opacity: inStock ? 1.0 : 0.5,
+          child: Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  product.skuName,
+                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, fontSize: 15),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+                const Spacer(),
 
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 8, 8, 35),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    product.skuName,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                Text(
+                  'Остаток: ${product.quantity} ${product.unit}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.disabledColor, // Менее заметный цвет
+                    fontSize: 11,
                   ),
-
-                  Text(
-                    'ШК: ${product.barcode}\nОст: ${product.quantity} ${product.unit}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  currencyFormat.format(product.price),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: inStock ? theme.colorScheme.primary : theme.disabledColor,
+                    fontSize: 16, // Крупнее
                   ),
-                ],
-              ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
         ),

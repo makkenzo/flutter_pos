@@ -238,22 +238,28 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
           clipBehavior: Clip.antiAlias,
           child: ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
-              child: Text(product.skuName.isNotEmpty ? product.skuName[0].toUpperCase() : '?'),
-            ),
             title: Text(product.skuName, style: const TextStyle(fontWeight: FontWeight.w500)),
-            subtitle: Text('ШК: ${product.barcode} | Остаток: ${product.quantity} ${product.unit}'),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  currencyFormat.format(product.price),
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
-                ),
-              ],
+            subtitle: Text(
+              'ШК: ${product.barcode}\nОстаток: ${product.quantity} ${product.unit}',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    currencyFormat.format(product.price),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
             ),
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (_) => ProductFormScreen(product: product)));
