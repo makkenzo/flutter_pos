@@ -7,10 +7,12 @@ import 'package:flutter_pos/models/sale_item.dart';
 import 'package:flutter_pos/providers/sales_history_provider.dart';
 import 'package:flutter_pos/services/api_service.dart';
 import 'package:flutter_pos/utils/pdf_generator.dart';
+import 'package:flutter_pos/widgets/list_item_placeholder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
+import 'package:shimmer/shimmer.dart';
 
 class SalesHistoryScreen extends ConsumerStatefulWidget {
   const SalesHistoryScreen({super.key});
@@ -64,26 +66,7 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
           children: [
             _buildSalesList(context, salesState, sales, isLoadingInitial, currencyFormat, dateFormat),
 
-            if (hasError && sales.isEmpty)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 50),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Ошибка загрузки истории:\n${_formatErrorMessage(salesState.error)}',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Theme.of(context).colorScheme.error),
-                      ),
-                      const SizedBox(height: 10),
-                      ElevatedButton(onPressed: _handleRefresh, child: const Text('Повторить')),
-                    ],
-                  ),
-                ),
-              ),
+            if (hasError && sales.isEmpty) _buildErrorWidget(context, salesState.error),
           ],
         ),
       ),
@@ -99,26 +82,47 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
     DateFormat dateFormat,
   ) {
     if (isLoadingInitial) {
-      return const Center(child: CircularProgressIndicator());
+      return Shimmer.fromColors(
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
+        enabled: true,
+        child: ListView.builder(
+          itemCount: 8, // Показываем несколько плейсхолдеров
+          itemBuilder:
+              (_, __) => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 2.0), // Небольшой отступ
+                child: SalesHistoryListItemPlaceholder(), // Используем плейсхолдер истории
+              ),
+        ),
+      );
     }
 
     if (sales.isEmpty && !salesState.isLoading && salesState.error == null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Text(
-            'История продаж пуста.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+          child: Column(
+            // Добавляем иконку
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.history_toggle_off_outlined, size: 60, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                'История продаж пуста.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+              ),
+            ],
           ),
         ),
       );
     }
 
-    return ListView.builder(
+    return ListView.separated(
       controller: _scrollController,
-      itemCount: sales.length + (salesState.isLoading ? 1 : 0),
-      padding: const EdgeInsets.only(bottom: 16),
+      itemCount: sales.length + (salesState.isLoading && sales.isNotEmpty ? 1 : 0),
+      padding: const EdgeInsets.only(bottom: 16, top: 8),
+      separatorBuilder: (context, index) => Divider(height: 1, thickness: 0.5, indent: 72, color: Colors.grey.shade300),
       itemBuilder: (context, index) {
         if (index == sales.length) {
           return const Padding(
@@ -148,6 +152,33 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildErrorWidget(BuildContext context, Object? error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off, color: Colors.red, size: 60), // Иконка ошибки сети/сервера
+            const SizedBox(height: 16),
+            Text(
+              'Ошибка загрузки товаров:\n${_formatErrorMessage(error)}',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 15), // Чуть крупнее
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              // Кнопка Повторить
+              icon: const Icon(Icons.refresh),
+              label: const Text('Повторить'),
+              onPressed: _handleRefresh,
+            ),
+          ],
+        ),
+      ),
     );
   }
 

@@ -8,8 +8,10 @@ import 'package:flutter_pos/screens/pos/pos_screen.dart';
 import 'package:flutter_pos/screens/products/product_form_screen.dart';
 import 'package:flutter_pos/screens/sales/sales_history_screen.dart';
 import 'package:flutter_pos/services/api_service.dart';
+import 'package:flutter_pos/widgets/list_item_placeholder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:shimmer/shimmer.dart';
 
 class Debouncer {
   final Duration delay;
@@ -56,8 +58,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
       ref.read(productListProvider.notifier).fetchNextPage();
     }
   }
@@ -76,14 +77,10 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   Widget build(BuildContext context) {
     final ProductListState productState = ref.watch(productListProvider);
     final List<Product> products = productState.products;
-    final bool isLoadingInitial =
-        productState.isLoading &&
-        products.isEmpty &&
-        productState.error == null;
+    final bool isLoadingInitial = productState.isLoading && products.isEmpty && productState.error == null;
     final bool isLoadingMore = productState.isLoading && products.isNotEmpty;
     final bool hasError = productState.error != null && !productState.isLoading;
-    final bool canLoadMore =
-        !productState.isLoading && !productState.hasReachedMax;
+    final bool canLoadMore = !productState.isLoading && !productState.hasReachedMax;
 
     final currencyFormat = NumberFormat.currency(locale: 'ru_RU', symbol: '₸');
 
@@ -94,20 +91,12 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           IconButton(
             icon: const Icon(Icons.history),
             tooltip: 'История продаж',
-            onPressed:
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SalesHistoryScreen()),
-                ),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SalesHistoryScreen())),
           ),
           IconButton(
             icon: const Icon(Icons.point_of_sale),
             tooltip: 'Касса',
-            onPressed:
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PosScreen()),
-                ),
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PosScreen())),
           ),
           IconButton(
             icon: const Icon(Icons.logout),
@@ -118,19 +107,12 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                 builder:
                     (context) => AlertDialog(
                       title: const Text('Подтверждение выхода'),
-                      content: const Text(
-                        'Вы уверены, что хотите выйти из системы?',
-                      ),
+                      content: const Text('Вы уверены, что хотите выйти из системы?'),
                       actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(false),
-                          child: const Text('Отмена'),
-                        ),
+                        TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Отмена')),
                         TextButton(
                           onPressed: () => Navigator.of(context).pop(true),
-                          style: TextButton.styleFrom(
-                            foregroundColor: Colors.red,
-                          ),
+                          style: TextButton.styleFrom(foregroundColor: Colors.red),
                           child: const Text('Выйти'),
                         ),
                       ],
@@ -147,10 +129,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(kToolbarHeight),
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12.0,
-              vertical: 8.0,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
@@ -167,14 +146,9 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                           },
                         )
                         : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(30.0),
-                  borderSide: BorderSide.none,
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide.none),
                 filled: true,
-                fillColor: Theme.of(
-                  context,
-                ).colorScheme.surfaceVariant.withOpacity(0.6),
+                fillColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.6),
                 contentPadding: const EdgeInsets.symmetric(vertical: 0),
               ),
               onChanged: _onSearchChanged,
@@ -182,48 +156,13 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           ),
         ),
       ),
-
       body: RefreshIndicator(
         onRefresh: _handleRefresh,
         child: Stack(
           children: [
-            _buildBodyContent(
-              context,
-              productState,
-              products,
-              isLoadingInitial,
-              currencyFormat,
-            ),
+            _buildBodyContent(context, productState, products, isLoadingInitial, currencyFormat),
 
-            if (hasError && products.isEmpty)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        color: Colors.red,
-                        size: 50,
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        'Ошибка загрузки товаров:\n${_formatErrorMessage(productState.error)}',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: _handleRefresh,
-                        child: const Text('Повторить'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            if (hasError && products.isEmpty) _buildErrorWidget(context, productState.error),
           ],
         ),
       ),
@@ -232,10 +171,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         child: const Icon(Icons.add),
         tooltip: 'Добавить товар',
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => ProductFormScreen(product: null)),
-          );
+          Navigator.push(context, MaterialPageRoute(builder: (_) => ProductFormScreen(product: null)));
         },
       ),
     );
@@ -249,33 +185,50 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     NumberFormat currencyFormat,
   ) {
     if (isLoadingInitial) {
-      return const Center(child: CircularProgressIndicator());
+      return Shimmer.fromColors(
+        baseColor: Colors.grey.shade300,
+        highlightColor: Colors.grey.shade100,
+        enabled: true,
+        child: ListView.builder(
+          itemBuilder:
+              (_, __) => const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                child: Card(child: ProductListItemPlaceholder()),
+              ),
+          itemCount: 10,
+        ),
+      );
     }
 
-    if (products.isEmpty &&
-        !productState.isLoading &&
-        productState.error == null) {
+    if (products.isEmpty && !productState.isLoading && productState.error == null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Text(
-            productState.currentQuery != null &&
-                    productState.currentQuery!.isNotEmpty
-                ? 'Товары по запросу "${productState.currentQuery}" не найдены.'
-                : 'Нет добавленных товаров.\nНажмите "+", чтобы добавить первый.',
-            textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.search_off, size: 60, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                productState.currentQuery != null && productState.currentQuery!.isNotEmpty
+                    ? 'Товары по запросу "${productState.currentQuery}" не найдены.'
+                    : 'Нет добавленных товаров.\nНажмите "+", чтобы добавить первый.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey[600]),
+              ),
+            ],
           ),
         ),
       );
     }
 
-    return ListView.builder(
+    return ListView.separated(
       controller: _scrollController,
-      itemCount: products.length + (productState.isLoading ? 1 : 0),
-      padding: const EdgeInsets.only(bottom: 80),
+      itemCount: products.length + (productState.isLoading && products.isNotEmpty ? 1 : 0),
+      padding: const EdgeInsets.only(bottom: 80, top: 8),
+      separatorBuilder:
+          (context, index) =>
+              Divider(height: 1, thickness: 0.5, indent: 16, endIndent: 16, color: Colors.grey.shade300),
       itemBuilder: (context, index) {
         if (index == products.length) {
           return const Padding(
@@ -285,48 +238,63 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         }
 
         final product = products[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-          clipBehavior: Clip.antiAlias,
-          child: ListTile(
-            title: Text(
-              product.skuName,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-            subtitle: Text(
-              'ШК: ${product.barcode}\nОстаток: ${product.quantity} ${product.unit}',
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            trailing: Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    currencyFormat.format(product.price),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ProductFormScreen(product: product),
-                ),
-              );
-            },
-            onLongPress: () => _showDeleteConfirmation(context, product),
+        return ListTile(
+          title: Text(product.skuName, style: const TextStyle(fontWeight: FontWeight.w500)),
+          subtitle: Text(
+            'ШК: ${product.barcode}\nОстаток: ${product.quantity} ${product.unit}',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
+          trailing: Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  currencyFormat.format(product.price),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          onTap: () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => ProductFormScreen(product: product)));
+          },
+          onLongPress: () => _showDeleteConfirmation(context, product),
         );
       },
+    );
+  }
+
+  Widget _buildErrorWidget(BuildContext context, Object? error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.cloud_off, color: Colors.red, size: 60), // Иконка ошибки сети/сервера
+            const SizedBox(height: 16),
+            Text(
+              'Ошибка загрузки товаров:\n${_formatErrorMessage(error)}',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 15), // Чуть крупнее
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              // Кнопка Повторить
+              icon: const Icon(Icons.refresh),
+              label: const Text('Повторить'),
+              onPressed: _handleRefresh,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -338,14 +306,9 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           builder: (context, dialogRef, child) {
             return AlertDialog(
               title: const Text('Подтвердить удаление'),
-              content: Text(
-                'Вы уверены, что хотите удалить товар "${product.skuName}" (ID: ${product.id})?',
-              ),
+              content: Text('Вы уверены, что хотите удалить товар "${product.skuName}" (ID: ${product.id})?'),
               actions: <Widget>[
-                TextButton(
-                  child: const Text('Отмена'),
-                  onPressed: () => Navigator.of(ctx).pop(),
-                ),
+                TextButton(child: const Text('Отмена'), onPressed: () => Navigator.of(ctx).pop()),
                 TextButton(
                   style: TextButton.styleFrom(foregroundColor: Colors.red),
                   child: const Text('Удалить'),
@@ -361,11 +324,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                       ScaffoldMessenger.of(context).removeCurrentSnackBar();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text(
-                            success
-                                ? 'Товар "${product.skuName}" удален'
-                                : 'Ошибка удаления товара',
-                          ),
+                          content: Text(success ? 'Товар "${product.skuName}" удален' : 'Ошибка удаления товара'),
                           backgroundColor: success ? Colors.green : Colors.red,
                         ),
                       );
