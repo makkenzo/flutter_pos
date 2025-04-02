@@ -1,4 +1,6 @@
 import 'package:flutter_pos/providers/api_provider.dart';
+import 'package:flutter_pos/providers/product_providers.dart';
+import 'package:flutter_pos/providers/sales_history_provider.dart';
 import 'package:flutter_pos/services/api_service.dart';
 import 'package:flutter_pos/services/storage_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -48,25 +50,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (token != null && token.isNotEmpty) {
         print("AuthNotifier: Found stored token.");
 
-        /*
-        try {
-          
-          
-           print("AuthNotifier: Token appears valid (или проверка прошла успешно).");
-           state = AuthState.authenticated(token: token);
-        } on UnauthorizedException {
-           print("AuthNotifier: Stored token is invalid or expired.");
-           await _storageService.deleteToken();
-           state = const AuthState.unauthenticated();
-        } catch (e) {
-          
-           print("AuthNotifier: Error validating token: $e. Assuming unauthenticated for now.");
-          
-          
-           state = const AuthState.unauthenticated();
-        }
-        */
-
         state = AuthState.authenticated(token: token);
       } else {
         print("AuthNotifier: No stored token found.");
@@ -97,6 +80,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
         print("AuthNotifier: Error deleting token from storage during logout: $storageError");
       }
     } finally {
+      print("AuthNotifier: Resetting user-specific data providers...");
+      _ref.read(productListProvider.notifier).reset();
+       _ref.read(salesHistoryProvider.notifier).reset();
       state = const AuthState.unauthenticated();
       print("AuthNotifier: State set to unauthenticated.");
     }

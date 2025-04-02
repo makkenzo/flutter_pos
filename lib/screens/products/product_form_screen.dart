@@ -188,13 +188,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 validator: _validateNotEmpty,
                 enabled: !isLoading,
               ),
-              _buildTextField(
-                controller: _skuCodeController,
-                labelText: 'Артикул (SKU Code) *',
-                icon: Icons.inventory_2_outlined,
-                validator: _validateNotEmpty,
-                enabled: !isLoading,
-              ),
+             
               _buildTextField(
                 controller: _barcodeController,
                 labelText: 'Штрих-код *',
@@ -207,6 +201,16 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 labelText: 'Ед. изм. *',
                 icon: Icons.square_foot_outlined,
                 validator: _validateNotEmpty,
+                enabled: !isLoading,
+              ),
+               _buildTextField(
+                controller: _costPriceController,
+                labelText: 'Себестоимость *',
+                icon: Icons.price_change_outlined,
+                prefixText: '₸ ',
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+                validator: _validatePositiveNumber,
                 enabled: !isLoading,
               ),
               _buildTextField(
@@ -233,40 +237,15 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
               Text('Дополнительная информация (необязательно)', style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: 10),
 
-              _buildTextField(
-                controller: _costPriceController,
-                labelText: 'Себестоимость',
-                icon: Icons.price_change_outlined,
-                prefixText: '₸ ',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
-                validator: _validateNonNegativeNumberOrEmpty,
+               _buildTextField(
+                controller: _skuCodeController,
+                labelText: 'SKU',
+                icon: Icons.inventory_2_outlined,
+                validator: _validateNotEmpty,
                 enabled: !isLoading,
               ),
-              _buildTextField(
-                controller: _status1cController,
-                labelText: 'Статус 1C',
-                icon: Icons.sync_alt,
-                enabled: !isLoading,
-              ),
-              _buildTextField(
-                controller: _departmentController,
-                labelText: 'Отдел',
-                icon: Icons.store_mall_directory_outlined,
-                enabled: !isLoading,
-              ),
-              _buildTextField(
-                controller: _groupNameController,
-                labelText: 'Группа',
-                icon: Icons.category_outlined,
-                enabled: !isLoading,
-              ),
-              _buildTextField(
-                controller: _subgroupController,
-                labelText: 'Подгруппа',
-                icon: Icons.interests_outlined,
-                enabled: !isLoading,
-              ),
+
+             
               _buildTextField(
                 controller: _supplierController,
                 labelText: 'Поставщик',

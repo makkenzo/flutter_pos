@@ -52,7 +52,14 @@ class ProductListNotifier extends StateNotifier<ProductListState> {
   final int _limit = 20;
 
   ProductListNotifier(this._ref) : super(const ProductListState()) {
-    fetchProducts();
+    _ref.listen<AuthState>(authProvider, (prev, next) {
+      if (prev?.status != AuthStatus.authenticated && next.status == AuthStatus.authenticated) {
+        refresh();
+      }
+    });
+    if (_ref.read(authProvider).status == AuthState.authenticated) {
+      fetchProducts();
+    }
   }
 
   Future<void> fetchProducts({bool isRefresh = false, String? query}) async {
@@ -103,6 +110,10 @@ class ProductListNotifier extends StateNotifier<ProductListState> {
 
   void invalidateList() {
     refresh();
+  }
+
+  void reset() {
+    state = const ProductListState();
   }
 }
 

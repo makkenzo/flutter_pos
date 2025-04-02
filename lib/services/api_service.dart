@@ -247,7 +247,7 @@ class ApiService {
   }
 
   Future<Product> addProduct(Product product) async {
-    final Uri productsUri = Uri.parse('$_baseUrl/products/local');
+    final Uri productsUri = Uri.parse('$_baseUrl/products/local/');
     print('Adding product to: $productsUri');
 
     try {

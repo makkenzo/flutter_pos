@@ -49,7 +49,15 @@ class SalesHistoryNotifier extends StateNotifier<SalesHistoryState> {
   final int _limit = 30;
 
   SalesHistoryNotifier(this._ref) : super(const SalesHistoryState()) {
-    fetchSales();
+    _ref.listen<AuthState>(authProvider, (previous, next) {
+      if (previous?.status != AuthStatus.authenticated && next.status == AuthStatus.authenticated) {
+        refresh();
+      }
+    });
+
+    if (_ref.read(authProvider).status == AuthStatus.authenticated) {
+      fetchSales();
+    }
   }
 
   Future<void> fetchSales({bool isRefresh = false}) async {
@@ -92,6 +100,10 @@ class SalesHistoryNotifier extends StateNotifier<SalesHistoryState> {
 
   Future<void> refresh() async {
     await fetchSales(isRefresh: true);
+  }
+
+  void reset() {
+    state = const SalesHistoryState();
   }
 }
 
