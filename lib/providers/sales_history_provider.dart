@@ -85,11 +85,9 @@ class SalesHistoryNotifier extends StateNotifier<SalesHistoryState> {
         currentPage: reachedMax ? state.currentPage : pageToFetch + 1,
       );
     } on UnauthorizedException catch (e) {
-      print('Error fetching sales history: Unauthorized $e');
       state = state.copyWith(isLoading: false, error: e);
       _ref.read(authProvider.notifier).logout();
     } catch (e) {
-      print('Error fetching sales history page $pageToFetch: $e');
       state = state.copyWith(isLoading: false, error: e);
     }
   }

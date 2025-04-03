@@ -8,7 +8,7 @@ import 'package:flutter_pos/theme/custom_themes/elevated_button_theme.dart';
 import 'package:flutter_pos/theme/custom_themes/outlined_button_theme.dart';
 import 'package:flutter_pos/theme/custom_themes/text_field_theme.dart';
 import 'package:flutter_pos/theme/custom_themes/text_theme.dart';
-import 'package:flutter_pos/utils/constants/colors.dart';
+
 import 'package:google_fonts/google_fonts.dart';
 
 class TAppTheme {

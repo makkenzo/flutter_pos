@@ -208,13 +208,10 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
     DateFormat dateFormat,
   ) async {
     List<SaleItem>? saleItems;
-    Object? detailError;
 
     try {
       saleItems = await ref.read(saleDetailsProvider(sale.orderId).future);
-    } catch (e) {
-      detailError = e;
-    }
+    } catch (e) {}
 
     if (!context.mounted) return;
 

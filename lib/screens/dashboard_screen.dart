@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_pos/providers/auth_provider.dart';
+import 'package:flutter_pos/screens/analytics_screen.dart';
 import 'package:flutter_pos/screens/inventory_screen.dart';
 import 'package:flutter_pos/screens/pos/pos_screen.dart';
 import 'package:flutter_pos/screens/products/product_list_screen.dart';
@@ -37,6 +38,15 @@ class DashboardScreen extends ConsumerWidget {
               context,
               MaterialPageRoute(builder: (_) => const InventoryScreen()),
             ), // Переход на новый экран
+      ),
+      _DashboardItemData(
+        icon: Icons.analytics_outlined, // \u003c--- Новая иконка
+        title: 'Аналитика',
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AnalyticsScreen()),
+            ), // \u003c--- Переход
       ),
     ];
 

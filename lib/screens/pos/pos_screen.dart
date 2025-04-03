@@ -82,7 +82,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
   Future<void> _processScannedBarcode(String barcodeValue) async {
     if (!context.mounted || barcodeValue.isEmpty) return;
-    print("Processing scanned barcode: $barcodeValue");
 
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     scaffoldMessenger.showSnackBar(
@@ -102,26 +101,20 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       scaffoldMessenger.hideCurrentSnackBar();
 
       if (product == null) {
-        print("Product not found globally. Navigating to create form.");
         await _navigateToProductForm(barcodeValue: barcodeValue);
       } else {
-        print("Product found globally: ${product.skuName}, Quantity: ${product.quantity}");
         if (product.quantity > 0) {
-          print("Product is LOCAL. Adding to cart.");
           _addProductToCart(product);
         } else {
-          print("Product is GLOBAL-ONLY. Navigating to create form with prefill.");
           await _navigateToProductForm(product: product);
         }
       }
     } on UnauthorizedException catch (e) {
-      print("Unauthorized during barcode processing: $e");
       if (!context.mounted) return;
       scaffoldMessenger.hideCurrentSnackBar();
       scaffoldMessenger.showSnackBar(SnackBar(content: Text("Ошибка авторизации: $e"), backgroundColor: Colors.red));
       ref.read(authProvider.notifier).logout();
     } catch (e) {
-      print("Error processing barcode $barcodeValue: $e");
       if (!context.mounted) return;
       scaffoldMessenger.hideCurrentSnackBar();
       scaffoldMessenger.showSnackBar(
@@ -158,7 +151,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
         content: Text(
           product == null
               ? 'Товар с ШК $barcodeValue не найден. Создайте его.'
-              : 'Товар \"${product.skuName}\" нужно добавить в ваш каталог. Заполните данные.',
+              : 'Товар "${product.skuName}" нужно добавить в ваш каталог. Заполните данные.',
         ),
         duration: const Duration(seconds: 3),
       ),
@@ -170,11 +163,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     );
 
     if (createdProduct != null && context.mounted) {
-      print("Product created via form: ${createdProduct.skuName}. Adding to cart.");
       _addProductToCart(createdProduct);
-    } else {
-      print("Product creation cancelled or failed.");
-    }
+    } else {}
   }
 
   void _addProductToCart(Product product) {
@@ -606,14 +596,14 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
                         avatar:
                             isSelected
                                 ? Icon(
-                                  chipIcon ?? Icons.circle,
+                                  chipIcon,
                                   size: 18,
                                   color:
                                       Theme.of(context).chipTheme.secondaryLabelStyle?.color ??
                                       Theme.of(context).colorScheme.onPrimary,
                                 )
                                 : Icon(
-                                  chipIcon ?? Icons.circle,
+                                  chipIcon,
                                   size: 18,
                                   color: Theme.of(context).chipTheme.labelStyle?.color?.withValues(alpha: 0.7),
                                 ),
@@ -664,9 +654,9 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
 
                   minimumSize: const Size(double.infinity, 50),
                 ).copyWith(
-                  backgroundColor: MaterialStateProperty.resolveWith<Color?>((Set<MaterialState> states) {
-                    if (states.contains(MaterialState.disabled)) {
-                      return Theme.of(context).colorScheme.primary.withOpacity(0.5);
+                  backgroundColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+                    if (states.contains(WidgetState.disabled)) {
+                      return Theme.of(context).colorScheme.primary.withValues(alpha: 0.5);
                     }
 
                     return null;
@@ -675,7 +665,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
 
                 icon:
                     widget.isCheckoutLoading
-                        ? Container(
+                        ? SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
@@ -850,7 +840,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             tooltip: 'Уменьшить',
             onPressed: () async {
               // Вибрация перед действием
-              if (await Vibration.hasVibrator() ?? false) {
+              if (await Vibration.hasVibrator()) {
                 Vibration.vibrate(duration: 30);
               } // Короткая вибрация
               ref.read(cartProvider.notifier).decrementQuantity(item.barcode);
@@ -875,7 +865,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             constraints: const BoxConstraints(),
             tooltip: 'Увеличить',
             onPressed: () async {
-              if (await Vibration.hasVibrator() ?? false) {
+              if (await Vibration.hasVibrator()) {
                 Vibration.vibrate(duration: 30);
               }
               ref.read(cartProvider.notifier).incrementQuantity(item.barcode);
@@ -903,7 +893,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             constraints: const BoxConstraints(),
             tooltip: 'Удалить из корзины',
             onPressed: () async {
-              if (await Vibration.hasVibrator() ?? false) {
+              if (await Vibration.hasVibrator()) {
                 Vibration.vibrate(duration: 50);
               } // Чуть дольше при удалении
               ref.read(cartProvider.notifier).removeItem(item.barcode);

@@ -47,7 +47,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     _priceController = TextEditingController(text: p?.price.toString() ?? '');
     _quantityController = TextEditingController(text: p?.quantity.toString() ?? '0');
 
-    _costPriceController = TextEditingController(text: p?.costPrice?.toString() ?? '');
+    _costPriceController = TextEditingController(text: p?.costPrice.toString() ?? '');
     _status1cController = TextEditingController(text: p?.status1c ?? '');
     _departmentController = TextEditingController(text: p?.department ?? '');
     _groupNameController = TextEditingController(text: p?.groupName ?? '');
@@ -267,6 +267,13 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 enabled: !isLoading,
                 textInputAction: TextInputAction.next,
               ),
+              Padding(
+                padding: const EdgeInsets.only(top: TSizes.xs, left: TSizes.sm, right: TSizes.sm),
+                child: Text(
+                  'Изменение этого значения обновит текущий остаток товара на складе.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).hintColor),
+                ),
+              ),
 
               const SizedBox(height: TSizes.spaceBtwSections),
 
@@ -443,22 +450,6 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     final number = int.tryParse(value);
     if (number == null) {
       return 'Введите целое число';
-    }
-    if (number < 0) {
-      return 'Число не может быть отрицательным';
-    }
-    return null;
-  }
-
-  String? _validateNonNegativeNumberOrEmpty(String? value) {
-    value = value?.trim();
-
-    if (value == null || value.isEmpty) {
-      return null;
-    }
-    final number = double.tryParse(value);
-    if (number == null) {
-      return 'Введите корректное число или оставьте поле пустым';
     }
     if (number < 0) {
       return 'Число не может быть отрицательным';

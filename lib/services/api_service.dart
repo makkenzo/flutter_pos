@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter_pos/models/analytics/sales_analytics.dart';
 import 'package:flutter_pos/models/cart_item.dart';
 import 'package:flutter_pos/models/payment_method.dart';
 import 'package:flutter_pos/models/product.dart';
@@ -9,6 +11,7 @@ import 'package:flutter_pos/models/sale_item.dart';
 import 'package:flutter_pos/services/storage_service.dart';
 import 'package:flutter_pos/utils/constants/api_constants.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 class PaginatedResponse<T> {
   final int totalCount;
@@ -498,6 +501,53 @@ class ApiService {
       print('Get sale items unexpected error: $e');
       if (e is Exception) rethrow;
       throw Exception('Неизвестная ошибка при получении деталей продажи: ${e.runtimeType}');
+    }
+  }
+
+  Future<SalesAnalytics> getSalesAnalytics({DateTime? startDate, DateTime? endDate}) async {
+    final queryParams = <String, String>{};
+    // Форматируем даты в ISO 8601 (YYYY-MM-DD), если они переданы
+    // Уточните у API, какой формат даты он ожидает!
+    if (startDate != null) {
+      queryParams['start_date'] = DateFormat('yyyy-MM-dd').format(startDate);
+    }
+    if (endDate != null) {
+      // Включаем весь день для endDate
+      queryParams['end_date'] = DateFormat('yyyy-MM-dd').format(endDate.add(const Duration(days: 1)));
+    }
+
+    // ЗАМЕНИТЕ на ваш эндпоинт
+    final Uri analyticsUri = Uri.parse('${ApiConstants.baseUrl}/analytics/sales').replace(queryParameters: queryParams);
+    print('Fetching sales analytics from: $analyticsUri');
+
+    try {
+      final response = await http
+          .get(analyticsUri, headers: await _getAuthHeaders(includeContentType: false))
+          .timeout(const Duration(seconds: 30)); // Таймаут побольше для аналитики
+
+      print('Get sales analytics status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        try {
+          final body = jsonDecode(utf8.decode(response.bodyBytes));
+          return SalesAnalytics.fromJson(body);
+        } catch (e, stackTrace) {
+          print('Get sales analytics error parsing response: $e\n$stackTrace');
+          throw Exception('Ошибка обработки ответа сервера при получении аналитики.');
+        }
+      } else {
+        throw _handleHttpError(response, 'Get sales analytics');
+      }
+    } on SocketException catch (e) {
+      print('Get sales analytics network error: $e');
+      throw Exception('Ошибка сети при получении аналитики.');
+    } on TimeoutException catch (e) {
+      print('Get sales analytics timeout error: $e');
+      throw Exception('Превышено время ожидания ответа от сервера.');
+    } catch (e) {
+      print('Get sales analytics unexpected error: $e');
+      if (e is Exception) rethrow;
+      throw Exception('Неизвестная ошибка при получении аналитики: ${e.runtimeType}');
     }
   }
 }

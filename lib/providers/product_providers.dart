@@ -54,51 +54,25 @@ class ProductListNotifier extends StateNotifier<ProductListState> {
   final int _limit = 20;
 
   ProductListNotifier(this._ref) : super(const ProductListState()) {
-    print("ProductListNotifier constructor called.");
-
-    // Слушаем ПОСЛЕДУЮЩИЕ изменения аутентификации
     _ref.listen<AuthState>(authProvider, (previous, next) {
-      print("ProductListNotifier: Auth state changed from ${previous?.status} to ${next.status}");
-      // РЕАГИРУЕМ ТОЛЬКО НА ВЫХОД ЗДЕСЬ (или на повторный вход, если нужно)
       if (next.status == AuthStatus.unauthenticated && previous?.status == AuthStatus.authenticated) {
-        print("ProductListNotifier: Auth became unauthenticated via listener. Resetting state.");
         reset();
       }
-      // Можно добавить реакцию на повторный вход, если нужно (но init должен справиться)
-      // else if (next.status == AuthStatus.authenticated && previous?.status != AuthStatus.authenticated) {
-      //    print("ProductListNotifier: Auth became authenticated via listener. Refreshing.");
-      //    refresh();
-      // }
     });
 
-    // Запускаем асинхронную инициализацию ПОСЛЕ завершения конструктора
-    // scheduleMicrotask гарантирует, что AuthNotifier уже инициализирован
     scheduleMicrotask(() {
-      print("ProductListNotifier: Running initial check via scheduleMicrotask.");
       _init();
     });
-    // Или через Future.delayed:
-    // Future.delayed(Duration.zero, _init);
-
-    print("ProductListNotifier constructor finished.");
   }
 
   Future<void> _init() async {
-    // Проверяем ТЕКУЩИЙ статус authProvider
     final currentAuthStatus = _ref.read(authProvider).status;
-    print("ProductListNotifier _init: Current auth status is $currentAuthStatus");
+
     if (currentAuthStatus == AuthStatus.authenticated) {
-      // Если пользователь аутентифицирован на момент проверки,
-      // и список еще не загружается и не загружен (на всякий случай)
       if (state.products.isEmpty && !state.isLoading) {
-        print("ProductListNotifier _init: Authenticated and list is empty/not loading. Calling refresh().");
-        await refresh(); // Запускаем загрузку/обновление
-      } else {
-        print("ProductListNotifier _init: Authenticated, but list is already loading or not empty.");
-      }
+        await refresh();
+      } else {}
     } else {
-      print("ProductListNotifier _init: Not authenticated. Doing nothing.");
-      // Если не аутентифицирован, убедимся, что состояние сброшено
       reset();
     }
   }
@@ -126,9 +100,7 @@ class ProductListNotifier extends StateNotifier<ProductListState> {
         currentPage: pageToFetch + 1,
         currentQuery: fetchQuery,
       );
-    } catch (e, st) {
-      print('Error fetching products page $pageToFetch: $e');
-
+    } catch (e) {
       if (e is UnauthorizedException) {
         _ref.read(authProvider.notifier).logout();
       }
@@ -155,7 +127,6 @@ class ProductListNotifier extends StateNotifier<ProductListState> {
 
   void reset() {
     if (state != const ProductListState()) {
-      print("Resetting ProductListState.");
       state = const ProductListState();
     }
   }
@@ -183,12 +154,10 @@ class ProductFormNotifier extends StateNotifier<AsyncValue<void>> {
       state = const AsyncValue.data(null);
       return createdProduct;
     } on UnauthorizedException catch (e, st) {
-      print('Error adding product: Unauthorized $e');
       state = AsyncValue.error(e, st);
       _ref.read(authProvider.notifier).logout();
       return null;
     } catch (e, st) {
-      print('Error adding product via API: $e');
       state = AsyncValue.error(e, st);
       return null;
     }
@@ -200,18 +169,16 @@ class ProductFormNotifier extends StateNotifier<AsyncValue<void>> {
 
     try {
       final apiService = _ref.read(apiServiceProvider);
-      // ApiService.updateProduct должен возвращать Product
+
       updatedProduct = await apiService.updateProduct(productId, product);
       await _ref.read(productListProvider.notifier).refresh();
       state = const AsyncValue.data(null);
       return updatedProduct;
     } on UnauthorizedException catch (e, st) {
-      print('Error updating product: Unauthorized $e');
       state = AsyncValue.error(e, st);
       _ref.read(authProvider.notifier).logout();
       return null;
     } catch (e, st) {
-      print('Error updating product via API: $e');
       state = AsyncValue.error(e, st);
       return null;
     }
@@ -228,12 +195,10 @@ class ProductFormNotifier extends StateNotifier<AsyncValue<void>> {
       state = const AsyncValue.data(null);
       return true;
     } on UnauthorizedException catch (e, st) {
-      print('Error deleting product: Unauthorized $e');
       state = AsyncValue.error(e, st);
       _ref.read(authProvider.notifier).logout();
       return false;
     } catch (e, st) {
-      print('Error deleting product via API: $e');
       state = AsyncValue.error(e, st);
       return false;
     }
@@ -254,7 +219,6 @@ final productByBarcodeProvider = FutureProvider.autoDispose.family<Product?, Str
 
     return null;
   } catch (e) {
-    print("Error fetching product by barcode $barcode: $e");
     return null;
   }
 });

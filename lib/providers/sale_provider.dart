@@ -5,10 +5,9 @@ import 'package:flutter_pos/providers/cart_provider.dart';
 import 'package:flutter_pos/services/api_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final saleNotifierProvider =
-    StateNotifierProvider<SaleNotifier, AsyncValue<String?>>((ref) {
-      return SaleNotifier(ref);
-    });
+final saleNotifierProvider = StateNotifierProvider<SaleNotifier, AsyncValue<String?>>((ref) {
+  return SaleNotifier(ref);
+});
 
 class SaleNotifier extends StateNotifier<AsyncValue<String?>> {
   final Ref _ref;
@@ -28,11 +27,7 @@ class SaleNotifier extends StateNotifier<AsyncValue<String?>> {
     try {
       final apiService = _ref.read(apiServiceProvider);
       // --- ИЗМЕНЕНО: Получаем orderId (String) ---
-      final String createdOrderId = await apiService.createSale(
-        cart.items,
-        cart.totalPrice,
-        paymentMethod,
-      );
+      final String createdOrderId = await apiService.createSale(cart.items, cart.totalPrice, paymentMethod);
       // -------------------------------------------
 
       // --- ИЗМЕНЕНО: Сохраняем orderId в состоянии ---
@@ -41,16 +36,12 @@ class SaleNotifier extends StateNotifier<AsyncValue<String?>> {
 
       _ref.read(cartProvider.notifier).clearCart();
 
-      print('Sale created successfully with Order ID: $createdOrderId');
-
       // Опционально: Сброс состояния
       // _resetStateAfterDelay();
     } on UnauthorizedException catch (e, stackTrace) {
-      print('Checkout failed: Unauthorized $e');
       state = AsyncValue.error(e, stackTrace);
       _ref.read(authProvider.notifier).logout();
     } catch (error, stackTrace) {
-      print('Checkout failed: $error');
       state = AsyncValue.error(error, stackTrace);
       _resetStateAfterDelay();
     }
