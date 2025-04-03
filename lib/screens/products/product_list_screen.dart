@@ -219,17 +219,32 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     NumberFormat currencyFormat,
   ) {
     if (isLoadingInitial) {
+      final Brightness currentBrightness = Theme.of(context).brightness;
+      // Выбираем цвета в зависимости от темы
+      final Color baseColor =
+          currentBrightness == Brightness.dark
+              ? Colors.grey[850]! // Темный базовый
+              : Colors.grey[300]!; // Светлый базовый
+      final Color highlightColor =
+          currentBrightness == Brightness.dark
+              ? Colors.grey[700]! // Темный для переливания
+              : Colors.grey[100]!;
+
       return Shimmer.fromColors(
-        baseColor: Colors.grey.shade300,
-        highlightColor: Colors.grey.shade100,
+        baseColor: baseColor, // \u003c--- Используем выбранный цвет
+        highlightColor: highlightColor, // \u003c--- Используем выбранный цвет
         enabled: true,
         child: ListView.builder(
+          itemCount: 10,
           itemBuilder:
               (_, __) => Padding(
                 padding: const EdgeInsets.symmetric(horizontal: TSizes.sm, vertical: TSizes.xs),
-                child: Card(child: ProductListItemPlaceholder()),
+                child: Card(
+                  // Плейсхолдеру можно задать фон, контрастный shimmer\u0027у
+                  // color: currentBrightness == Brightness.dark ? Colors.black.withOpacity(0.2) : null,
+                  child: const ProductListItemPlaceholder(),
+                ), // Используем плейсхолдер товара
               ),
-          itemCount: 10,
         ),
       );
     }

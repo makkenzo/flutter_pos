@@ -53,7 +53,6 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
     final SalesHistoryState salesState = ref.watch(salesHistoryProvider);
     final List<Sale> sales = salesState.sales;
     final bool isLoadingInitial = salesState.isLoading && sales.isEmpty && salesState.error == null;
-    final bool isLoadingMore = salesState.isLoading && sales.isNotEmpty;
     final bool hasError = salesState.error != null && !salesState.isLoading;
 
     final currencyFormat = NumberFormat.currency(locale: 'ru_RU', symbol: '₸');
@@ -83,15 +82,19 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
     DateFormat dateFormat,
   ) {
     if (isLoadingInitial) {
+      final Brightness currentBrightness = Theme.of(context).brightness;
+      final Color baseColor = currentBrightness == Brightness.dark ? Colors.grey[850]! : Colors.grey[300]!;
+      final Color highlightColor = currentBrightness == Brightness.dark ? Colors.grey[700]! : Colors.grey[100]!;
+
       return Shimmer.fromColors(
-        baseColor: Colors.grey.shade300,
-        highlightColor: Colors.grey.shade100,
+        baseColor: baseColor,
+        highlightColor: highlightColor,
         enabled: true,
         child: ListView.builder(
-          itemCount: 8, // Показываем несколько плейсхолдеров
+          itemCount: 8,
           itemBuilder:
               (_, __) => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 2.0), // Небольшой отступ
+                padding: EdgeInsets.symmetric(vertical: 2.0),
                 child: SalesHistoryListItemPlaceholder(), // Используем плейсхолдер истории
               ),
         ),

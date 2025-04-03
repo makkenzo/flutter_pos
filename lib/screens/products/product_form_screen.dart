@@ -30,9 +30,9 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   late TextEditingController _groupNameController;
   late TextEditingController _subgroupController;
   late TextEditingController _supplierController;
-  late TextEditingController _descriptionController;
 
   bool get _isEditing => widget.product != null;
+  bool _isDeleting = false;
 
   @override
   void initState() {
@@ -167,13 +167,20 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         actions: [
           if (_isEditing)
             IconButton(
-              icon: const Icon(Icons.delete_outline),
+              icon:
+                  _isDeleting
+                      ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                      : const Icon(Icons.delete_outline),
               tooltip: 'Удалить товар',
               onPressed: isLoading ? null : _confirmAndDelete,
             ),
           IconButton(
             icon:
-                isLoading
+                isLoading && !_isDeleting
                     ? SizedBox(
                       width: 20,
                       height: 20,
@@ -181,7 +188,6 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                     )
                     : const Icon(Icons.save),
             tooltip: 'Сохранить',
-
             onPressed: isLoading ? null : _saveForm,
           ),
         ],
@@ -345,12 +351,24 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     );
 
     if (confirm == true) {
-      final bool success = await ref.read(productFormNotifierProvider.notifier).deleteProduct(productToDelete.id);
+      setState(() {
+        _isDeleting = true;
+      });
 
-      if (context.mounted) {
-        if (success) {
-          Navigator.of(context).pop();
+      bool success = false;
+
+      try {
+        success = await ref.read(productFormNotifierProvider.notifier).deleteProduct(productToDelete.id);
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isDeleting = false;
+          });
         }
+      }
+
+      if (success && mounted) {
+        Navigator.of(context).pop(); // Закрываем при успехе
       }
     }
   }

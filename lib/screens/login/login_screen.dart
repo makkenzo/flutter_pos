@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_pos/providers/login_provider.dart';
 import 'package:flutter_pos/utils/constants/sizes.dart';
+import 'package:flutter_pos/utils/helpers/error_formatter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -46,7 +47,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     ref.listen<AsyncValue<void>>(loginProvider, (previous, next) {
       if (!next.isLoading && next.hasError) {
-        final errorMessage = next.error.toString();
+        final errorMessage = formatErrorMessage(next.error);
 
         if (errorMessage != _lastError) {
           setState(() {
