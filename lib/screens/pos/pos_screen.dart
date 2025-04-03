@@ -15,6 +15,7 @@ import 'package:flutter_pos/utils/constants/sizes.dart';
 import 'package:flutter_pos/widgets/barcode_scanner_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_pos/utils/helpers/error_formatter.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_pos/screens/products/product_list_screen.dart' show Debouncer;
 
@@ -548,18 +549,29 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
         Expanded(
           child:
               items.isEmpty
-                  ? const Center(/* ... */)
-                  : ListView.builder(
-                    padding: const EdgeInsets.only(top: 8),
-                    itemCount: items.length,
-                    itemBuilder: (context, index) {
-                      final item = items[index];
+                  ? const Center(child: Text('Корзина пуста'))
+                  : AnimationLimiter(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.only(top: TSizes.xs),
+                      itemCount: items.length,
+                      itemBuilder: (context, index) {
+                        final item = items[index];
 
-                      return _buildCartItemTile(context, ref, item, widget.currencyFormat);
-                    },
+                        return AnimationConfiguration.staggeredList(
+                          position: index,
+                          duration: const Duration(milliseconds: 250),
+                          child: SlideAnimation(
+                            verticalOffset: 30.0,
+                            child: FadeInAnimation(
+                              child: _buildCartItemTile(context, ref, item, widget.currencyFormat),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
         ),
-        const Divider(),
+        const Divider(height: 1),
 
         Padding(
           padding: const EdgeInsets.fromLTRB(TSizes.md, TSizes.sm, TSizes.md, TSizes.md),
