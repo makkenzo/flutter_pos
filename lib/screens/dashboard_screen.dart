@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_pos/providers/auth_provider.dart';
+import 'package:flutter_pos/screens/inventory_screen.dart';
 import 'package:flutter_pos/screens/pos/pos_screen.dart';
 import 'package:flutter_pos/screens/products/product_list_screen.dart';
 import 'package:flutter_pos/screens/sales/sales_history_screen.dart';
@@ -12,8 +13,6 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
     final List<_DashboardItemData> dashboardItems = [
       _DashboardItemData(
         icon: Icons.point_of_sale_outlined,
@@ -29,6 +28,15 @@ class DashboardScreen extends ConsumerWidget {
         icon: Icons.history_outlined,
         title: 'История Продаж',
         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SalesHistoryScreen())),
+      ),
+      _DashboardItemData(
+        icon: Icons.inventory_outlined, // Иконка инвентаря/склада
+        title: 'Остатки',
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const InventoryScreen()),
+            ), // Переход на новый экран
       ),
     ];
 
