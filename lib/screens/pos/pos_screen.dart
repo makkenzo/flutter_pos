@@ -18,6 +18,7 @@ import 'package:flutter_pos/utils/helpers/error_formatter.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_pos/screens/products/product_list_screen.dart' show Debouncer;
+import 'package:vibration/vibration.dart';
 
 class PosScreen extends ConsumerStatefulWidget {
   const PosScreen({super.key});
@@ -588,22 +589,52 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
                 runSpacing: TSizes.xs,
                 children:
                     PaymentMethod.values.map((method) {
-                      return RadioListTile<PaymentMethod>(
-                        title: Text(method.displayTitle),
-                        value: method,
-                        groupValue: _selectedPaymentMethod,
-                        onChanged:
+                      final bool isSelected = _selectedPaymentMethod == method;
+                      IconData? chipIcon; // Иконка для чипа
+                      switch (method) {
+                        case PaymentMethod.cash:
+                          chipIcon = Icons.money_outlined;
+                          break;
+                        case PaymentMethod.card:
+                          chipIcon = Icons.credit_card_outlined;
+                          break;
+                        case PaymentMethod.other:
+                          chipIcon = Icons.question_mark_rounded;
+                          break;
+                      }
+                      return ChoiceChip(
+                        avatar:
+                            isSelected
+                                ? Icon(
+                                  chipIcon ?? Icons.circle,
+                                  size: 18,
+                                  color:
+                                      Theme.of(context).chipTheme.secondaryLabelStyle?.color ??
+                                      Theme.of(context).colorScheme.onPrimary,
+                                )
+                                : Icon(
+                                  chipIcon ?? Icons.circle,
+                                  size: 18,
+                                  color: Theme.of(context).chipTheme.labelStyle?.color?.withValues(alpha: 0.7),
+                                ),
+                        label: Text(method.displayTitle),
+                        labelStyle: TextStyle(
+                          color:
+                              isSelected
+                                  ? Theme.of(context).chipTheme.secondaryLabelStyle?.color
+                                  : Theme.of(context).chipTheme.labelStyle?.color,
+                        ),
+                        selected: isSelected,
+                        onSelected:
                             widget.isCheckoutLoading
                                 ? null
-                                : (PaymentMethod? value) {
-                                  if (value != null) {
+                                : (selected) {
+                                  if (selected) {
                                     setState(() {
-                                      _selectedPaymentMethod = value;
+                                      _selectedPaymentMethod = method;
                                     });
                                   }
                                 },
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
                       );
                     }).toList(),
               ),
@@ -817,7 +848,11 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             padding: const EdgeInsets.all(TSizes.xs),
             constraints: const BoxConstraints(),
             tooltip: 'Уменьшить',
-            onPressed: () {
+            onPressed: () async {
+              // Вибрация перед действием
+              if (await Vibration.hasVibrator() ?? false) {
+                Vibration.vibrate(duration: 30);
+              } // Короткая вибрация
               ref.read(cartProvider.notifier).decrementQuantity(item.barcode);
             },
           ),
@@ -839,7 +874,12 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             padding: const EdgeInsets.all(TSizes.xs),
             constraints: const BoxConstraints(),
             tooltip: 'Увеличить',
-            onPressed: () => ref.read(cartProvider.notifier).incrementQuantity(item.barcode),
+            onPressed: () async {
+              if (await Vibration.hasVibrator() ?? false) {
+                Vibration.vibrate(duration: 30);
+              }
+              ref.read(cartProvider.notifier).incrementQuantity(item.barcode);
+            },
           ),
         ],
       ),
@@ -862,7 +902,12 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             padding: const EdgeInsets.all(TSizes.xs),
             constraints: const BoxConstraints(),
             tooltip: 'Удалить из корзины',
-            onPressed: () => ref.read(cartProvider.notifier).removeItem(item.barcode),
+            onPressed: () async {
+              if (await Vibration.hasVibrator() ?? false) {
+                Vibration.vibrate(duration: 50);
+              } // Чуть дольше при удалении
+              ref.read(cartProvider.notifier).removeItem(item.barcode);
+            },
           ),
         ],
       ),
