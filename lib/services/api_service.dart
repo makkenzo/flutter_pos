@@ -310,13 +310,14 @@ class ApiService {
 
     final List<Map<String, dynamic>> itemsBody =
         cartItems.map((item) {
-          final double itemCostPrice = 0.0;
+          final double itemCostPrice = item.costPrice;
           return {
             'product_id': item.productId,
+            'product_name': item.name,
+            'barcode': item.barcode,
             'quantity': item.quantity,
             'price': item.priceAtSale,
-            'cost_price': itemCostPrice, // <--- ДОБАВЛЕНО ПОЛЕ cost_price
-            // 'total': item.itemTotal, // Если нужно
+            'cost_price': itemCostPrice,
           };
         }).toList();
 

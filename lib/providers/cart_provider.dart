@@ -22,6 +22,7 @@ class CartNotifier extends StateNotifier<CartState> {
         barcode: product.barcode,
         name: product.skuName,
         priceAtSale: product.price,
+        costPrice: product.costPrice,
         quantity: 1,
       );
       state = state.updateItem(newItem);

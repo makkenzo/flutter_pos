@@ -641,28 +641,6 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
               ),
               const SizedBox(height: TSizes.spaceBtwItems),
               ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-
-                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
-
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-
-                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-
-                  minimumSize: const Size(double.infinity, 50),
-                ).copyWith(
-                  backgroundColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
-                    if (states.contains(WidgetState.disabled)) {
-                      return Theme.of(context).colorScheme.primary.withValues(alpha: 0.5);
-                    }
-
-                    return null;
-                  }),
-                ),
-
                 icon:
                     widget.isCheckoutLoading
                         ? SizedBox(

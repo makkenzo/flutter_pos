@@ -2,6 +2,7 @@ class CartItem {
   final int productId;
   final String barcode;
   final String name;
+  final double costPrice;
   final double priceAtSale;
 
   int quantity;
@@ -11,6 +12,7 @@ class CartItem {
     required this.barcode,
     required this.name,
     required this.priceAtSale,
+    required this.costPrice,
 
     required this.quantity,
   });
@@ -28,12 +30,21 @@ class CartItem {
 
   double get itemTotal => priceAtSale * quantity;
 
-  CartItem copyWith({int? productId, String? barcode, String? name, double? priceAtSale, String? unit, int? quantity}) {
+  CartItem copyWith({
+    int? productId,
+    String? barcode,
+    String? name,
+    double? priceAtSale,
+    String? unit,
+    int? quantity,
+    double? costPrice,
+  }) {
     return CartItem(
       productId: productId ?? this.productId,
       barcode: barcode ?? this.barcode,
       name: name ?? this.name,
       priceAtSale: priceAtSale ?? this.priceAtSale,
+      costPrice: costPrice ?? this.costPrice,
 
       quantity: quantity ?? this.quantity,
     );
@@ -47,6 +58,6 @@ class CartItem {
   int get hashCode => barcode.hashCode;
 
   Map<String, dynamic> toJsonForSaleCreation() {
-    return {'product_id': productId, 'quantity': quantity, 'price': priceAtSale, 'cost_price': 0};
+    return {'product_id': productId, 'quantity': quantity, 'price': priceAtSale, 'cost_price': costPrice};
   }
 }
