@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter_pos/models/analytics/sales_analytics.dart';
 import 'package:flutter_pos/models/cart_item.dart';
+import 'package:flutter_pos/models/cart_state.dart';
 import 'package:flutter_pos/models/payment_method.dart';
 import 'package:flutter_pos/models/product.dart';
 import 'package:flutter_pos/models/sale.dart';
@@ -295,7 +296,14 @@ class ApiService {
     }
   }
 
-  Future<String> createSale(List<CartItem> cartItems, double totalAmount, PaymentMethod paymentMethod) async {
+  Future<String> createSale(
+    List<CartItem> cartItems,
+    double totalAmount,
+    PaymentMethod paymentMethod,
+    CartDiscountType discountType,
+    double discountValue,
+    double subtotal,
+  ) async {
     if (cartItems.isEmpty) {
       throw ArgumentError("Корзина не может быть пустой для создания продажи.");
     }
@@ -304,6 +312,8 @@ class ApiService {
       'currency': 'KZT',
       'payment_method': paymentMethod.name,
       'sale_status': 'paid',
+      'discount_type': discountType.name,
+      'discount_value': discountValue.toString(),
     };
 
     final Uri salesUri = Uri.parse('${ApiConstants.baseUrl}/sales/create').replace(queryParameters: queryParams);

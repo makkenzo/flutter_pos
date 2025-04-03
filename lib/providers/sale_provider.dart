@@ -16,8 +16,8 @@ class SaleNotifier extends StateNotifier<AsyncValue<String?>> {
   SaleNotifier(this._ref) : super(const AsyncValue.data(null));
 
   Future<void> checkout(PaymentMethod paymentMethod) async {
-    final cart = _ref.read(cartProvider);
-    if (cart.items.isEmpty) {
+    final cartState = _ref.read(cartProvider);
+    if (cartState.items.isEmpty) {
       state = AsyncValue.error('Корзина пуста!', StackTrace.current);
       _resetStateAfterDelay();
       return;
@@ -28,7 +28,14 @@ class SaleNotifier extends StateNotifier<AsyncValue<String?>> {
     try {
       final apiService = _ref.read(apiServiceProvider);
 
-      final String createdOrderId = await apiService.createSale(cart.items, cart.totalPrice, paymentMethod);
+      final String createdOrderId = await apiService.createSale(
+        cartState.items,
+        cartState.totalPrice, // Итоговая сумма со скидкой
+        paymentMethod,
+        cartState.discountType, // Тип скидки
+        cartState.discountValue, // Значение скидки
+        cartState.subtotal, // Сумма до скидки
+      );
 
       _ref.read(cartProvider.notifier).clearCart();
       _ref.invalidate(salesHistoryProvider);
