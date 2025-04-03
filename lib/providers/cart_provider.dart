@@ -29,6 +29,19 @@ class CartNotifier extends StateNotifier<CartState> {
     }
   }
 
+  void applyCartDiscount(CartDiscountType type, double value) {
+    if (value < 0) return;
+    if (type == CartDiscountType.percentage && value > 100) {
+      value = 100.0;
+    }
+
+    state = state.applyCartDiscount(type, value);
+  }
+
+  void removeCartDiscount() {
+    state = state.removeCartDiscount();
+  }
+
   void incrementQuantity(String sku) {
     final item = state.findItemByBarcode(sku);
     if (item != null) {

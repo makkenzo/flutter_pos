@@ -349,17 +349,15 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           Icon(Icons.warning_amber_rounded, color: Colors.orange[700], size: 32),
           const SizedBox(height: 8),
           Text(
-            'Не удалось загрузить еще:\n${formatErrorMessage(error)}', // Используем форматтер
+            'Не удалось загрузить еще:\n${formatErrorMessage(error)}',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 8),
           TextButton.icon(
-            // Используем TextButton для компактности
             icon: const Icon(Icons.refresh, size: 18),
             label: const Text('Повторить'),
             onPressed: () {
-              // Вызываем загрузку СЛЕДУЮЩЕЙ страницы (не refresh всего списка)
               ref.read(productListProvider.notifier).fetchNextPage();
             },
           ),
@@ -437,19 +435,14 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   itemCount: products.length + (isLoadingMore ? 1 : 0),
                   itemBuilder: (context, index) {
                     if (index == products.length) {
-                      // Если есть ошибка и мы не грузим следующую страницу
                       if (productState.error != null && !productState.isLoading) {
-                        return _buildPaginationErrorWidget(context, productState.error); // Показываем виджет ошибки
-                      }
-                      // Если ошибки нет, но идет загрузка - показываем индикатор
-                      else if (productState.isLoading) {
+                        return _buildPaginationErrorWidget(context, productState.error);
+                      } else if (productState.isLoading) {
                         return const Padding(
                           padding: EdgeInsets.symmetric(vertical: 16.0),
                           child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
                         );
-                      }
-                      // Иначе (нет ошибки, не идет загрузка, но сюда дошли - например, hasReachedMax) - ничего не показываем
-                      else {
+                      } else {
                         return const SizedBox.shrink();
                       }
                     }
@@ -534,6 +527,14 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
   @override
   Widget build(BuildContext context) {
     final items = widget.cartState.items;
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+
+    final discountType = widget.cartState.discountType;
+    final discountValue = widget.cartState.discountValue;
+    final cartDiscountAmount = widget.cartState.cartDiscountAmount;
+    final subtotal = widget.cartState.subtotal;
+    final totalPrice = widget.cartState.totalPrice;
 
     return Column(
       children: [
@@ -562,25 +563,100 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
                     ),
                   ),
         ),
-        const Divider(height: 1),
-
-        Padding(
-          padding: const EdgeInsets.fromLTRB(TSizes.md, TSizes.sm, TSizes.md, TSizes.md),
+        Container(
+          decoration: BoxDecoration(border: Border(top: BorderSide(color: theme.dividerColor, width: 0.5))),
+          padding: const EdgeInsets.all(TSizes.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: TSizes.xs),
-                child: Text('Метод оплаты:', style: Theme.of(context).textTheme.titleSmall),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Подитог:', style: theme.textTheme.bodyLarge),
+                  Text(widget.currencyFormat.format(subtotal), style: theme.textTheme.bodyLarge),
+                ],
               ),
+              const SizedBox(height: TSizes.xs),
+              if (discountType != CartDiscountType.none && cartDiscountAmount > 0)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: TSizes.xs),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        discountType == CartDiscountType.percentage
+                            ? 'Скидка (${discountValue.toStringAsFixed(0)}%) :'
+                            : 'Скидка (Фикс.):',
+                        style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.primary),
+                      ),
 
+                      Text(
+                        '- ${widget.currencyFormat.format(cartDiscountAmount)}',
+                        style: theme.textTheme.bodyLarge?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const Divider(height: TSizes.sm, thickness: 0.5),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Делаем "Итого" крупнее и жирнее
+                  Text('Итого:', style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    widget.currencyFormat.format(totalPrice),
+                    // Делаем сумму тоже крупнее и жирнее
+                    style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 20),
+                  ),
+                ],
+              ),
+              const SizedBox(height: TSizes.spaceBtwItems),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  InkWell(
+                    onTap: widget.isCheckoutLoading ? null : () => _showDiscountDialog(context, ref),
+                    borderRadius: BorderRadius.circular(TSizes.borderRadiusSm),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.percent, size: 16, color: theme.colorScheme.primary),
+                          const SizedBox(width: TSizes.xs),
+                          Text('Скидка', style: textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: TSizes.sm),
+                  if (discountType != CartDiscountType.none)
+                    InkWell(
+                      onTap:
+                          widget.isCheckoutLoading ? null : () => ref.read(cartProvider.notifier).removeCartDiscount(),
+                      child: Padding(
+                        padding: const EdgeInsets.all(TSizes.xs),
+                        child: Icon(Icons.clear, size: 18, color: theme.colorScheme.error),
+                      ),
+                      borderRadius: BorderRadius.circular(100),
+                    ),
+
+                  const Spacer(),
+                ],
+              ),
+              const SizedBox(height: TSizes.spaceBtwItems),
+              Text('Метод оплаты:', style: textTheme.titleSmall),
+              const SizedBox(height: TSizes.xs),
               Wrap(
                 spacing: TSizes.sm,
                 runSpacing: TSizes.xs,
                 children:
                     PaymentMethod.values.map((method) {
                       final bool isSelected = _selectedPaymentMethod == method;
-                      IconData? chipIcon; // Иконка для чипа
+                      IconData? chipIcon;
                       switch (method) {
                         case PaymentMethod.cash:
                           chipIcon = Icons.money_outlined;
@@ -628,18 +704,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
                       );
                     }).toList(),
               ),
-              const SizedBox(height: TSizes.spaceBtwItems),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Итого:', style: Theme.of(context).textTheme.titleLarge),
-                  Text(
-                    widget.currencyFormat.format(widget.cartState.totalPrice),
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                ],
-              ),
-              const SizedBox(height: TSizes.spaceBtwItems),
+              const SizedBox(height: TSizes.spaceBtwSections),
               ElevatedButton.icon(
                 icon:
                     widget.isCheckoutLoading
@@ -648,7 +713,6 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-
                             color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
@@ -663,21 +727,153 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
                           ref.read(saleNotifierProvider.notifier).checkout(_selectedPaymentMethod);
                         },
               ),
-
-              if (items.isNotEmpty && !widget.isCheckoutLoading) ...[
-                SizedBox(height: TSizes.sm),
-                TextButton.icon(
-                  icon: const Icon(Icons.remove_shopping_cart_outlined, size: 18),
-                  label: const Text('Очистить корзину'),
-                  style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  onPressed: () => _showClearCartConfirmation(context, ref),
+              const SizedBox(height: TSizes.sm),
+              if (items.isNotEmpty && !widget.isCheckoutLoading)
+                Center(
+                  child: TextButton.icon(
+                    // --- ИЗМЕНЕНА ИКОНКА ---
+                    icon: const Icon(Icons.delete_sweep_outlined, size: 18), // Используем delete_sweep
+                    // ----------------------
+                    label: const Text('Очистить корзину'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: theme.colorScheme.error,
+                      padding: const EdgeInsets.symmetric(horizontal: TSizes.sm, vertical: TSizes.xs),
+                      textStyle: theme.textTheme.labelMedium,
+                    ),
+                    onPressed: () => _showClearCartConfirmation(context, ref),
+                  ),
                 ),
-              ],
             ],
           ),
         ),
       ],
     );
+  }
+
+  Widget _buildDiscountInput(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+
+    final currentDiscountType = ref.watch(cartProvider).discountType;
+
+    return Row(
+      children: [
+        OutlinedButton.icon(
+          icon: const Icon(Icons.percent, size: 18),
+          label: const Text('Скидка'),
+          style: OutlinedButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: TSizes.sm, vertical: TSizes.xs),
+            textStyle: theme.textTheme.labelLarge,
+            side: BorderSide(color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+          ),
+          onPressed:
+              widget.isCheckoutLoading
+                  ? null
+                  : () {
+                    _showDiscountDialog(context, ref);
+                  },
+        ),
+        const Spacer(),
+
+        if (currentDiscountType != CartDiscountType.none)
+          TextButton.icon(
+            icon: const Icon(Icons.clear, size: 16),
+            label: const Text('Удалить скидку'),
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.error,
+              textStyle: theme.textTheme.labelMedium,
+              padding: EdgeInsets.zero,
+            ),
+            onPressed: widget.isCheckoutLoading ? null : () => ref.read(cartProvider.notifier).removeCartDiscount(),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _showDiscountDialog(BuildContext context, WidgetRef ref) async {
+    final TextEditingController discountController = TextEditingController();
+    CartDiscountType selectedType = CartDiscountType.fixedAmount;
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Применить скидку'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      FilterChip(
+                        label: Text(PaymentMethod.cash.currencySymbol),
+                        selected: selectedType == CartDiscountType.fixedAmount,
+                        onSelected: (sel) => setStateDialog(() => selectedType = CartDiscountType.fixedAmount),
+                      ),
+                      const SizedBox(width: TSizes.sm),
+                      FilterChip(
+                        label: const Text('%'),
+                        selected: selectedType == CartDiscountType.percentage,
+                        onSelected: (sel) => setStateDialog(() => selectedType = CartDiscountType.percentage),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: TSizes.md),
+
+                  TextFormField(
+                    controller: discountController,
+                    decoration: InputDecoration(
+                      labelText: 'Значение скидки',
+                      suffixText: selectedType == CartDiscountType.percentage ? '%' : PaymentMethod.cash.currencySymbol,
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return 'Введите значение';
+                      final numValue = double.tryParse(value);
+                      if (numValue == null || numValue < 0) return 'Некорректно';
+                      if (selectedType == CartDiscountType.percentage && numValue > 100) return '<= 100%';
+                      return null;
+                    },
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: const Text('Отмена')),
+
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: discountController,
+                  builder: (context, value, child) {
+                    final numValue = double.tryParse(value.text);
+                    final bool isValid =
+                        numValue != null &&
+                        numValue >= 0 &&
+                        (selectedType == CartDiscountType.fixedAmount || numValue <= 100);
+                    return TextButton(
+                      onPressed:
+                          !isValid
+                              ? null
+                              : () {
+                                Navigator.of(dialogContext).pop({'type': selectedType, 'value': numValue});
+                              },
+                      child: const Text('Применить'),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result != null) {
+      final type = result['type'] as CartDiscountType;
+      final value = result['value'] as double;
+      ref.read(cartProvider.notifier).applyCartDiscount(type, value);
+    }
   }
 
   Future<void> _showQuantityEditDialog(CartItem item) async {
@@ -817,10 +1013,9 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             constraints: const BoxConstraints(),
             tooltip: 'Уменьшить',
             onPressed: () async {
-              // Вибрация перед действием
               if (await Vibration.hasVibrator()) {
                 Vibration.vibrate(duration: 30);
-              } // Короткая вибрация
+              }
               ref.read(cartProvider.notifier).decrementQuantity(item.barcode);
             },
           ),
@@ -873,7 +1068,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             onPressed: () async {
               if (await Vibration.hasVibrator()) {
                 Vibration.vibrate(duration: 50);
-              } // Чуть дольше при удалении
+              }
               ref.read(cartProvider.notifier).removeItem(item.barcode);
             },
           ),

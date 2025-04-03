@@ -47,6 +47,7 @@ final salesHistoryProvider = StateNotifierProvider<SalesHistoryNotifier, SalesHi
 class SalesHistoryNotifier extends StateNotifier<SalesHistoryState> {
   final Ref _ref;
   final int _limit = 30;
+  bool _isFetching = false;
 
   SalesHistoryNotifier(this._ref) : super(const SalesHistoryState()) {
     _ref.listen<AuthState>(authProvider, (previous, next) {
@@ -61,34 +62,61 @@ class SalesHistoryNotifier extends StateNotifier<SalesHistoryState> {
   }
 
   Future<void> fetchSales({bool isRefresh = false}) async {
-    if (state.isLoading || (state.hasReachedMax && !isRefresh)) return;
+    if (_isFetching || (state.hasReachedMax && !isRefresh)) return;
 
-    state = state.copyWith(isLoading: true, error: null, clearError: true);
+    final bool isNewSearchOrRefresh = isRefresh;
 
-    int pageToFetch = isRefresh ? 0 : state.currentPage;
+    if (state.hasReachedMax && !isNewSearchOrRefresh) return;
+
+    _isFetching = true;
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+      clearError: true,
+      hasReachedMax: isNewSearchOrRefresh ? false : state.hasReachedMax,
+      currentPage: isNewSearchOrRefresh ? 0 : state.currentPage,
+    );
+
+    int pageToFetch = state.currentPage;
     int skip = pageToFetch * _limit;
 
     try {
       final apiService = _ref.read(apiServiceProvider);
-
       final paginatedResponse = await apiService.getSalesHistory(skip: skip, limit: _limit, sortOrder: 'desc');
 
-      final newSales = paginatedResponse.content;
+      if (!mounted) {
+        _isFetching = false;
+        return;
+      }
 
+      final newSales = paginatedResponse.content;
       final bool reachedMax = paginatedResponse.isLast;
 
       state = state.copyWith(
         sales: (pageToFetch == 0) ? newSales : [...state.sales, ...newSales],
         isLoading: false,
         hasReachedMax: reachedMax,
-
         currentPage: reachedMax ? state.currentPage : pageToFetch + 1,
       );
     } on UnauthorizedException catch (e) {
-      state = state.copyWith(isLoading: false, error: e);
+      if (!mounted) {
+        _isFetching = false;
+        return;
+      }
+
+      state = state.copyWith(isLoading: false, error: e, hasReachedMax: true);
       _ref.read(authProvider.notifier).logout();
     } catch (e) {
+      if (!mounted) {
+        _isFetching = false;
+        return;
+      }
+
       state = state.copyWith(isLoading: false, error: e);
+    } finally {
+      if (mounted) {
+        _isFetching = false;
+      }
     }
   }
 
