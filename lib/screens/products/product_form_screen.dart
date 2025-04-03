@@ -168,6 +168,12 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       appBar: AppBar(
         title: Text(_isEditing ? 'Редактировать товар' : 'Добавить товар'),
         actions: [
+          if (_isEditing)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              tooltip: 'Удалить товар',
+              onPressed: isLoading ? null : _confirmAndDelete,
+            ),
           IconButton(
             icon:
                 isLoading
@@ -290,6 +296,54 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmAndDelete() async {
+    // Убедимся, что есть товар для удаления
+    final productToDelete = widget.product;
+    if (productToDelete == null) return;
+
+    // Спрашиваем подтверждение у пользователя
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          title: const Text('Подтвердить удаление'),
+          content: Text(
+            'Вы уверены, что хотите удалить товар \"${productToDelete.skuName}\"?\nЭто действие нельзя будет отменить.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Отмена'),
+              onPressed: () => Navigator.of(ctx).pop(false), // Возвращаем false
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Удалить'),
+              onPressed: () => Navigator.of(ctx).pop(true), // Возвращаем true
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      // Вызываем метод удаления из Notifier'а
+      // Notifier сам установит isLoading, и кнопка заблокируется
+      final bool success = await ref.read(productFormNotifierProvider.notifier).deleteProduct(productToDelete.id);
+
+      // Если виджет еще активен после await
+      if (context.mounted) {
+        if (success) {
+          // Сообщение об успехе покажет ProductListScreen после обновления
+          // Просто закрываем экран редактирования
+          Navigator.of(context).pop();
+          // Можно добавить задержку и показать SnackBar здесь, но лучше
+          // положиться на обновление списка на предыдущем экране.
+        }
+        // Если success == false, то ошибку покажет ref.listen в build
+      }
+    }
   }
 
   Widget _buildTextField({
