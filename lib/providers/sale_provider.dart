@@ -2,6 +2,7 @@ import 'package:flutter_pos/models/payment_method.dart';
 import 'package:flutter_pos/providers/api_provider.dart';
 import 'package:flutter_pos/providers/auth_provider.dart';
 import 'package:flutter_pos/providers/cart_provider.dart';
+import 'package:flutter_pos/providers/sales_history_provider.dart';
 import 'package:flutter_pos/services/api_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -26,18 +27,13 @@ class SaleNotifier extends StateNotifier<AsyncValue<String?>> {
 
     try {
       final apiService = _ref.read(apiServiceProvider);
-      // --- ИЗМЕНЕНО: Получаем orderId (String) ---
-      final String createdOrderId = await apiService.createSale(cart.items, cart.totalPrice, paymentMethod);
-      // -------------------------------------------
 
-      // --- ИЗМЕНЕНО: Сохраняем orderId в состоянии ---
-      state = AsyncValue.data(createdOrderId);
-      // ----------------------------------------------
+      final String createdOrderId = await apiService.createSale(cart.items, cart.totalPrice, paymentMethod);
 
       _ref.read(cartProvider.notifier).clearCart();
+      _ref.invalidate(salesHistoryProvider);
 
-      // Опционально: Сброс состояния
-      // _resetStateAfterDelay();
+      state = AsyncValue.data(createdOrderId);
     } on UnauthorizedException catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
       _ref.read(authProvider.notifier).logout();
