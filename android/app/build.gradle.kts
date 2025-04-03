@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.example.flutter_pos"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "29.0.13113456"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -35,6 +35,14 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            isMinifyEnabled = true // Используем isMinifyEnabled = ...
+            isShrinkResources = true // Используем isShrinkResources = ...
+
+            // Файлы правил передаются как varargs (переменное число аргументов)
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"), // Кавычки двойные
+                "proguard-rules.pro" // Кавычки двойные
+            )
         }
     }
 }
