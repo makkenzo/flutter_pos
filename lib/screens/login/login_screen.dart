@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_pos/providers/login_provider.dart';
+import 'package:flutter_pos/utils/constants/sizes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -75,7 +76,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.all(TSizes.lg),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 400),
             child: Form(
@@ -85,14 +86,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 40.0),
-                    child: Icon(
-                      Icons.point_of_sale,
-                      size: 80,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                    padding: const EdgeInsets.only(bottom: TSizes.xl * 1.5),
+                    child: Icon(Icons.point_of_sale, size: 80, color: Theme.of(context).colorScheme.primary),
                   ),
-
                   TextFormField(
                     controller: _usernameController,
                     decoration: InputDecoration(
@@ -101,16 +97,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       prefixIcon: const Icon(Icons.person_outline),
                       border: const OutlineInputBorder(),
                       filled: true,
-                      fillColor: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.04),
+                      fillColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.04),
                     ),
                     keyboardType: TextInputType.text,
                     textInputAction: TextInputAction.next,
                     enabled: !isLoading,
                   ),
-                  const SizedBox(height: 16),
-
+                  const SizedBox(height: TSizes.spaceBtwItems),
                   TextFormField(
                     controller: _passwordController,
                     decoration: InputDecoration(
@@ -119,19 +112,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       prefixIcon: const Icon(Icons.lock_outline),
                       border: const OutlineInputBorder(),
                       filled: true,
-                      fillColor: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withOpacity(0.04),
+                      fillColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.04),
                       suffixIcon: IconButton(
-                        icon: Icon(
-                          _isPasswordVisible
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                        ),
-                        tooltip:
-                            _isPasswordVisible
-                                ? 'Скрыть пароль'
-                                : 'Показать пароль',
+                        icon: Icon(_isPasswordVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                        tooltip: _isPasswordVisible ? 'Скрыть пароль' : 'Показать пароль',
                         onPressed:
                             isLoading
                                 ? null
@@ -154,35 +138,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     },
                     enabled: !isLoading,
                   ),
-                  const SizedBox(height: 24),
-
+                  const SizedBox(height: TSizes.spaceBtwSections),
                   ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      textStyle: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ).copyWith(
-                      backgroundColor:
-                          MaterialStateProperty.resolveWith<Color?>((
-                            Set<MaterialState> states,
-                          ) {
-                            if (states.contains(MaterialState.disabled)) {
-                              return Theme.of(
-                                context,
-                              ).colorScheme.primary.withOpacity(0.5);
-                            }
-                            return null;
-                          }),
+                    style: Theme.of(context).elevatedButtonTheme.style?.copyWith(
+                      padding: WidgetStateProperty.all(const EdgeInsets.symmetric(vertical: TSizes.md - 2)),
                     ),
-
                     icon:
                         isLoading
-                            ? Container(
+                            ? SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(

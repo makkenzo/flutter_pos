@@ -387,7 +387,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(TSizes.sm),
           child: TextField(
             controller: _searchController,
             decoration: InputDecoration(
@@ -435,12 +435,12 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
                 return GridView.builder(
                   controller: _productScrollController,
-                  padding: const EdgeInsets.all(12.0),
+                  padding: const EdgeInsets.all(TSizes.md),
                   gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
                     maxCrossAxisExtent: 220,
                     childAspectRatio: 0.9,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
+                    crossAxisSpacing: TSizes.md,
+                    mainAxisSpacing: TSizes.md,
                   ),
                   itemCount: products.length + (isLoadingMore ? 1 : 0),
                   itemBuilder: (context, index) {
@@ -481,13 +481,13 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     return Card(
       clipBehavior: Clip.antiAlias,
       elevation: inStock ? 3.0 : 1.0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(TSizes.borderRadiusMd)),
       child: InkWell(
         onTap: inStock ? () => _addProductToCart(product) : null,
         child: Opacity(
           opacity: inStock ? 1.0 : 0.5,
           child: Padding(
-            padding: const EdgeInsets.all(10.0),
+            padding: const EdgeInsets.all(TSizes.sm),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -506,7 +506,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   style: theme.textTheme.bodySmall?.copyWith(color: theme.disabledColor, fontSize: 11),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: TSizes.xs),
                 Text(
                   currencyFormat.format(product.price),
                   style: theme.textTheme.titleMedium?.copyWith(
@@ -562,17 +562,18 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
         const Divider(),
 
         Padding(
-          padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+          padding: const EdgeInsets.fromLTRB(TSizes.md, TSizes.sm, TSizes.md, TSizes.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                padding: const EdgeInsets.only(bottom: TSizes.xs),
                 child: Text('Метод оплаты:', style: Theme.of(context).textTheme.titleSmall),
               ),
 
-              Column(
-                mainAxisSize: MainAxisSize.min,
+              Wrap(
+                spacing: TSizes.sm,
+                runSpacing: TSizes.xs,
                 children:
                     PaymentMethod.values.map((method) {
                       return RadioListTile<PaymentMethod>(
@@ -594,8 +595,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
                       );
                     }).toList(),
               ),
-              const SizedBox(height: 16),
-
+              const SizedBox(height: TSizes.spaceBtwItems),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -606,8 +606,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-
+              const SizedBox(height: TSizes.spaceBtwItems),
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).colorScheme.primary,
@@ -655,7 +654,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
               ),
 
               if (items.isNotEmpty && !widget.isCheckoutLoading) ...[
-                const SizedBox(height: 8),
+                SizedBox(height: TSizes.sm),
                 TextButton.icon(
                   icon: const Icon(Icons.remove_shopping_cart_outlined, size: 18),
                   label: const Text('Очистить корзину'),
@@ -803,7 +802,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             icon: const Icon(Icons.remove_circle_outline),
             color: Colors.orange.shade700,
             iconSize: 24,
-            padding: EdgeInsets.all(4),
+            padding: const EdgeInsets.all(TSizes.xs),
             constraints: const BoxConstraints(),
             tooltip: 'Уменьшить',
             onPressed: () {
@@ -814,7 +813,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             onTap: () => _showQuantityEditDialog(item),
             borderRadius: BorderRadius.circular(TSizes.borderRadiusSm),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+              padding: const EdgeInsets.symmetric(horizontal: TSizes.sm),
               child: Text(
                 item.quantity.toString(),
                 style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
@@ -825,7 +824,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             icon: const Icon(Icons.add_circle_outline),
             color: Colors.green.shade700,
             iconSize: 24,
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.all(TSizes.xs),
             constraints: const BoxConstraints(),
             tooltip: 'Увеличить',
             onPressed: () => ref.read(cartProvider.notifier).incrementQuantity(item.barcode),
@@ -848,7 +847,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             icon: const Icon(Icons.delete_outline),
             color: theme.colorScheme.error,
             iconSize: 22,
-            padding: const EdgeInsets.all(4),
+            padding: const EdgeInsets.all(TSizes.xs),
             constraints: const BoxConstraints(),
             tooltip: 'Удалить из корзины',
             onPressed: () => ref.read(cartProvider.notifier).removeItem(item.barcode),

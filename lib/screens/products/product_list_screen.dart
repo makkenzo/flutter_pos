@@ -7,6 +7,7 @@ import 'package:flutter_pos/providers/product_providers.dart';
 import 'package:flutter_pos/screens/pos/pos_screen.dart';
 import 'package:flutter_pos/screens/products/product_form_screen.dart';
 import 'package:flutter_pos/screens/sales/sales_history_screen.dart';
+import 'package:flutter_pos/utils/constants/sizes.dart';
 import 'package:flutter_pos/utils/helpers/error_formatter.dart';
 import 'package:flutter_pos/widgets/list_item_placeholder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -126,16 +127,17 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight + 4),
+          preferredSize: const Size.fromHeight(TSizes.appBarHeight + 4),
           child: Column(
             children: [
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(horizontal: TSizes.md, vertical: TSizes.sm),
                 child: TextField(
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Поиск по названию, SKU, штрих-коду...',
                     prefixIcon: const Icon(Icons.search, size: 20),
+
                     suffixIcon:
                         _searchController.text.isNotEmpty
                             ? IconButton(
@@ -149,8 +151,8 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                             : null,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide.none),
                     filled: true,
-                    fillColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.6),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                    contentPadding: const EdgeInsets.symmetric(vertical: TSizes.xs),
                   ),
                   onChanged: _onSearchChanged,
                 ),
@@ -222,8 +224,8 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         enabled: true,
         child: ListView.builder(
           itemBuilder:
-              (_, __) => const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+              (_, __) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: TSizes.sm, vertical: TSizes.xs),
                 child: Card(child: ProductListItemPlaceholder()),
               ),
           itemCount: 10,
@@ -234,7 +236,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     if (products.isEmpty && !productState.isLoading && productState.error == null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(TSizes.defaultSpace),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -256,10 +258,10 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
     return ListView.separated(
       controller: _scrollController,
       itemCount: products.length + (productState.isLoading && products.isNotEmpty ? 1 : 0),
-      padding: const EdgeInsets.only(bottom: 80, top: 8),
+      padding: const EdgeInsets.only(bottom: 80, top: TSizes.sm),
       separatorBuilder:
           (context, index) =>
-              Divider(height: 1, thickness: 0.5, indent: 16, endIndent: 16, color: Colors.grey.shade300),
+              Divider(height: 1, thickness: 0.5, indent: TSizes.md, endIndent: TSizes.md, color: Colors.grey.shade300),
       itemBuilder: (context, index) {
         if (index == products.length) {
           // Если есть ошибка и мы не грузим следующую страницу
@@ -281,6 +283,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
 
         final product = products[index];
         return ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: TSizes.md, vertical: TSizes.xs),
           title: Text(product.skuName, style: const TextStyle(fontWeight: FontWeight.w500)),
           subtitle: Text(
             'ШК: ${product.barcode}\nОстаток: ${product.quantity} ${product.unit}',
@@ -288,7 +291,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
             overflow: TextOverflow.ellipsis,
           ),
           trailing: Padding(
-            padding: const EdgeInsets.only(right: 8.0),
+            padding: const EdgeInsets.only(right: TSizes.sm),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -316,7 +319,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   Widget _buildErrorWidget(BuildContext context, Object? error) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(TSizes.defaultSpace),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
