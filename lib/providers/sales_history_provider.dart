@@ -40,10 +40,9 @@ class SalesHistoryState {
   }
 }
 
-final salesHistoryProvider =
-    StateNotifierProvider<SalesHistoryNotifier, SalesHistoryState>((ref) {
-      return SalesHistoryNotifier(ref);
-    });
+final salesHistoryProvider = StateNotifierProvider<SalesHistoryNotifier, SalesHistoryState>((ref) {
+  return SalesHistoryNotifier(ref);
+});
 
 class SalesHistoryNotifier extends StateNotifier<SalesHistoryState> {
   final Ref _ref;
@@ -51,8 +50,7 @@ class SalesHistoryNotifier extends StateNotifier<SalesHistoryState> {
 
   SalesHistoryNotifier(this._ref) : super(const SalesHistoryState()) {
     _ref.listen<AuthState>(authProvider, (previous, next) {
-      if (previous?.status != AuthStatus.authenticated &&
-          next.status == AuthStatus.authenticated) {
+      if (previous?.status != AuthStatus.authenticated && next.status == AuthStatus.authenticated) {
         refresh();
       }
     });
@@ -73,11 +71,7 @@ class SalesHistoryNotifier extends StateNotifier<SalesHistoryState> {
     try {
       final apiService = _ref.read(apiServiceProvider);
 
-      final paginatedResponse = await apiService.getSalesHistory(
-        skip: skip,
-        limit: _limit,
-        sortOrder: 'desc',
-      );
+      final paginatedResponse = await apiService.getSalesHistory(skip: skip, limit: _limit, sortOrder: 'desc');
 
       final newSales = paginatedResponse.content;
 
@@ -90,11 +84,11 @@ class SalesHistoryNotifier extends StateNotifier<SalesHistoryState> {
 
         currentPage: reachedMax ? state.currentPage : pageToFetch + 1,
       );
-    } on UnauthorizedException catch (e, st) {
+    } on UnauthorizedException catch (e) {
       print('Error fetching sales history: Unauthorized $e');
       state = state.copyWith(isLoading: false, error: e);
       _ref.read(authProvider.notifier).logout();
-    } catch (e, st) {
+    } catch (e) {
       print('Error fetching sales history page $pageToFetch: $e');
       state = state.copyWith(isLoading: false, error: e);
     }
@@ -113,10 +107,7 @@ class SalesHistoryNotifier extends StateNotifier<SalesHistoryState> {
   }
 }
 
-final saleDetailsProvider = FutureProvider.family<List<SaleItem>, String>((
-  ref,
-  orderId,
-) async {
+final saleDetailsProvider = FutureProvider.family<List<SaleItem>, String>((ref, orderId) async {
   final apiService = ref.watch(apiServiceProvider);
   try {
     return await apiService.getSaleItems(orderId);

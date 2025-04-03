@@ -246,8 +246,7 @@ class ApiService {
 
       if (response.statusCode == 200) {
         try {
-          final body = jsonDecode(utf8.decode(response.bodyBytes));
-          return Product.fromJson(body);
+          return Product.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
         } catch (e) {
           print('Get product by barcode error parsing response: $e');
           throw Exception('Ошибка обработки ответа сервера.');

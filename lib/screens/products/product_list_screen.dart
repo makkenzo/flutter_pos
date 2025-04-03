@@ -168,11 +168,11 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       ),
 
       floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.add),
         tooltip: 'Добавить товар',
         onPressed: () {
           Navigator.push(context, MaterialPageRoute(builder: (_) => ProductFormScreen(product: null)));
         },
+        child: const Icon(Icons.add),
       ),
     );
   }

@@ -45,10 +45,9 @@ class ProductListState {
   }
 }
 
-final productListProvider =
-    StateNotifierProvider<ProductListNotifier, ProductListState>((ref) {
-      return ProductListNotifier(ref);
-    });
+final productListProvider = StateNotifierProvider<ProductListNotifier, ProductListState>((ref) {
+  return ProductListNotifier(ref);
+});
 
 class ProductListNotifier extends StateNotifier<ProductListState> {
   final Ref _ref;
@@ -59,15 +58,10 @@ class ProductListNotifier extends StateNotifier<ProductListState> {
 
     // Слушаем ПОСЛЕДУЮЩИЕ изменения аутентификации
     _ref.listen<AuthState>(authProvider, (previous, next) {
-      print(
-        "ProductListNotifier: Auth state changed from ${previous?.status} to ${next.status}",
-      );
+      print("ProductListNotifier: Auth state changed from ${previous?.status} to ${next.status}");
       // РЕАГИРУЕМ ТОЛЬКО НА ВЫХОД ЗДЕСЬ (или на повторный вход, если нужно)
-      if (next.status == AuthStatus.unauthenticated &&
-          previous?.status == AuthStatus.authenticated) {
-        print(
-          "ProductListNotifier: Auth became unauthenticated via listener. Resetting state.",
-        );
+      if (next.status == AuthStatus.unauthenticated && previous?.status == AuthStatus.authenticated) {
+        print("ProductListNotifier: Auth became unauthenticated via listener. Resetting state.");
         reset();
       }
       // Можно добавить реакцию на повторный вход, если нужно (но init должен справиться)
@@ -80,9 +74,7 @@ class ProductListNotifier extends StateNotifier<ProductListState> {
     // Запускаем асинхронную инициализацию ПОСЛЕ завершения конструктора
     // scheduleMicrotask гарантирует, что AuthNotifier уже инициализирован
     scheduleMicrotask(() {
-      print(
-        "ProductListNotifier: Running initial check via scheduleMicrotask.",
-      );
+      print("ProductListNotifier: Running initial check via scheduleMicrotask.");
       _init();
     });
     // Или через Future.delayed:
@@ -94,21 +86,15 @@ class ProductListNotifier extends StateNotifier<ProductListState> {
   Future<void> _init() async {
     // Проверяем ТЕКУЩИЙ статус authProvider
     final currentAuthStatus = _ref.read(authProvider).status;
-    print(
-      "ProductListNotifier _init: Current auth status is $currentAuthStatus",
-    );
+    print("ProductListNotifier _init: Current auth status is $currentAuthStatus");
     if (currentAuthStatus == AuthStatus.authenticated) {
       // Если пользователь аутентифицирован на момент проверки,
       // и список еще не загружается и не загружен (на всякий случай)
       if (state.products.isEmpty && !state.isLoading) {
-        print(
-          "ProductListNotifier _init: Authenticated and list is empty/not loading. Calling refresh().",
-        );
+        print("ProductListNotifier _init: Authenticated and list is empty/not loading. Calling refresh().");
         await refresh(); // Запускаем загрузку/обновление
       } else {
-        print(
-          "ProductListNotifier _init: Authenticated, but list is already loading or not empty.",
-        );
+        print("ProductListNotifier _init: Authenticated, but list is already loading or not empty.");
       }
     } else {
       print("ProductListNotifier _init: Not authenticated. Doing nothing.");
@@ -118,33 +104,23 @@ class ProductListNotifier extends StateNotifier<ProductListState> {
   }
 
   Future<void> fetchProducts({bool isRefresh = false, String? query}) async {
-    if (state.isLoading ||
-        (state.hasReachedMax && !isRefresh && query == state.currentQuery))
-      return;
+    if (state.isLoading || (state.hasReachedMax && !isRefresh && query == state.currentQuery)) return;
 
     state = state.copyWith(isLoading: true, error: null, clearError: true);
 
-    int pageToFetch =
-        isRefresh || query != state.currentQuery ? 0 : state.currentPage;
+    int pageToFetch = isRefresh || query != state.currentQuery ? 0 : state.currentPage;
     int skip = pageToFetch * _limit;
     String? fetchQuery = query ?? state.currentQuery;
 
     try {
       final apiService = _ref.read(apiServiceProvider);
-      final paginatedResponse = await apiService.getProducts(
-        skip: skip,
-        limit: _limit,
-        searchQuery: fetchQuery,
-      );
+      final paginatedResponse = await apiService.getProducts(skip: skip, limit: _limit, searchQuery: fetchQuery);
 
       final newProducts = paginatedResponse.content;
       final bool isLastPage = paginatedResponse.isLast;
 
       state = state.copyWith(
-        products:
-            (pageToFetch == 0)
-                ? newProducts
-                : [...state.products, ...newProducts],
+        products: (pageToFetch == 0) ? newProducts : [...state.products, ...newProducts],
         isLoading: false,
         hasReachedMax: isLastPage,
         currentPage: pageToFetch + 1,
@@ -166,10 +142,7 @@ class ProductListNotifier extends StateNotifier<ProductListState> {
   }
 
   Future<void> search(String query) async {
-    await fetchProducts(
-      isRefresh: true,
-      query: query.isNotEmpty ? query : null,
-    );
+    await fetchProducts(isRefresh: true, query: query.isNotEmpty ? query : null);
   }
 
   Future<void> refresh() async {
@@ -188,59 +161,59 @@ class ProductListNotifier extends StateNotifier<ProductListState> {
   }
 }
 
-final productFormNotifierProvider =
-    StateNotifierProvider.autoDispose<ProductFormNotifier, AsyncValue<void>>((
-      ref,
-    ) {
-      return ProductFormNotifier(ref);
-    });
+final productFormNotifierProvider = StateNotifierProvider.autoDispose<ProductFormNotifier, AsyncValue<void>>((ref) {
+  return ProductFormNotifier(ref);
+});
 
 class ProductFormNotifier extends StateNotifier<AsyncValue<void>> {
   final Ref _ref;
 
   ProductFormNotifier(this._ref) : super(const AsyncValue.data(null));
 
-  Future<bool> addProduct(Product product) async {
+  Future<Product?> addProduct(Product product) async {
     state = const AsyncValue.loading();
+    Product? createdProduct;
+
     try {
       final apiService = _ref.read(apiServiceProvider);
-      await apiService.addProduct(product);
+      createdProduct = await apiService.addProduct(product);
 
       await _ref.read(productListProvider.notifier).refresh();
 
       state = const AsyncValue.data(null);
-      return true;
+      return createdProduct;
     } on UnauthorizedException catch (e, st) {
       print('Error adding product: Unauthorized $e');
       state = AsyncValue.error(e, st);
       _ref.read(authProvider.notifier).logout();
-      return false;
+      return null;
     } catch (e, st) {
       print('Error adding product via API: $e');
       state = AsyncValue.error(e, st);
-      return false;
+      return null;
     }
   }
 
-  Future<bool> updateProduct(int productId, Product product) async {
+  Future<Product?> updateProduct(int productId, Product product) async {
     state = const AsyncValue.loading();
+    Product? updatedProduct;
+
     try {
       final apiService = _ref.read(apiServiceProvider);
-      await apiService.updateProduct(productId, product);
-
+      // ApiService.updateProduct должен возвращать Product
+      updatedProduct = await apiService.updateProduct(productId, product);
       await _ref.read(productListProvider.notifier).refresh();
-
       state = const AsyncValue.data(null);
-      return true;
+      return updatedProduct;
     } on UnauthorizedException catch (e, st) {
       print('Error updating product: Unauthorized $e');
       state = AsyncValue.error(e, st);
       _ref.read(authProvider.notifier).logout();
-      return false;
+      return null;
     } catch (e, st) {
       print('Error updating product via API: $e');
       state = AsyncValue.error(e, st);
-      return false;
+      return null;
     }
   }
 
@@ -267,22 +240,21 @@ class ProductFormNotifier extends StateNotifier<AsyncValue<void>> {
   }
 }
 
-final productByBarcodeProvider = FutureProvider.autoDispose
-    .family<Product?, String>((ref, barcode) async {
-      if (barcode.isEmpty) {
-        return null;
-      }
+final productByBarcodeProvider = FutureProvider.autoDispose.family<Product?, String>((ref, barcode) async {
+  if (barcode.isEmpty) {
+    return null;
+  }
 
-      final apiService = ref.watch(apiServiceProvider);
-      try {
-        final product = await apiService.getProductByBarcode(barcode);
-        return product;
-      } on UnauthorizedException {
-        ref.read(authProvider.notifier).logout();
+  final apiService = ref.watch(apiServiceProvider);
+  try {
+    final product = await apiService.getProductByBarcode(barcode);
+    return product;
+  } on UnauthorizedException {
+    ref.read(authProvider.notifier).logout();
 
-        return null;
-      } catch (e) {
-        print("Error fetching product by barcode $barcode: $e");
-        return null;
-      }
-    });
+    return null;
+  } catch (e) {
+    print("Error fetching product by barcode $barcode: $e");
+    return null;
+  }
+});

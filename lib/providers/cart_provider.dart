@@ -21,11 +21,15 @@ class CartNotifier extends StateNotifier<CartState> {
     // --------------------------------------
 
     // Ищем товар в корзине по barcode
-    final existingItem = state.findItemByBarcode(product.barcode); // Убедитесь, что этот метод есть в CartState
+    final existingItem = state.findItemByBarcode(
+      product.barcode,
+    ); // Убедитесь, что этот метод есть в CartState
 
     if (existingItem != null) {
       // Товар найден - увеличиваем количество
-      final updatedItem = existingItem.copyWith(quantity: existingItem.quantity + 1);
+      final updatedItem = existingItem.copyWith(
+        quantity: existingItem.quantity + 1,
+      );
       state = state.updateItem(updatedItem);
     } else {
       // Товара нет - создаем новый CartItem

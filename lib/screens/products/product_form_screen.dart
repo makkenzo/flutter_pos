@@ -116,24 +116,32 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       updatedAt: widget.product?.updatedAt ?? now,
     );
 
-    bool success;
+    Product? resultProduct;
+
     if (_isEditing) {
-      success = await ref.read(productFormNotifierProvider.notifier).updateProduct(widget.product!.id, productData);
+      resultProduct = await ref
+          .read(productFormNotifierProvider.notifier)
+          .updateProduct(widget.product!.id, productData);
     } else {
-      success = await ref.read(productFormNotifierProvider.notifier).addProduct(productData);
+      resultProduct = await ref.read(productFormNotifierProvider.notifier).addProduct(productData);
     }
 
     if (context.mounted) {
-      if (success) {
+      if (resultProduct != null) {
+        // \u003c--- Проверяем результат здесь
+        // Показываем сообщение об успехе
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_isEditing ? 'Товар успешно обновлен' : 'Товар успешно добавлен'),
             backgroundColor: Colors.green,
           ),
         );
-
-        Navigator.of(context).pop();
+        // Возвращаемся на предыдущий экран и передаем созданный/обновленный продукт
+        Navigator.of(context).pop(resultProduct);
       }
+      // Если resultProduct == null, значит произошла ошибка.
+      // Сообщение об ошибке уже должно было быть показано
+      // с помощью ref.listen в методе build этого экрана.
     }
   }
 
