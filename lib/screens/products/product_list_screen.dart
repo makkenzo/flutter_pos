@@ -11,6 +11,7 @@ import 'package:flutter_pos/utils/constants/sizes.dart';
 import 'package:flutter_pos/utils/helpers/error_formatter.dart';
 import 'package:flutter_pos/widgets/list_item_placeholder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -255,64 +256,80 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
       );
     }
 
-    return ListView.separated(
-      controller: _scrollController,
-      itemCount: products.length + (productState.isLoading && products.isNotEmpty ? 1 : 0),
-      padding: const EdgeInsets.only(bottom: 80, top: TSizes.sm),
-      separatorBuilder:
-          (context, index) =>
-              Divider(height: 1, thickness: 0.5, indent: TSizes.md, endIndent: TSizes.md, color: Colors.grey.shade300),
-      itemBuilder: (context, index) {
-        if (index == products.length) {
-          // Если есть ошибка и мы не грузим следующую страницу
-          if (productState.error != null && !productState.isLoading) {
-            return _buildPaginationErrorWidget(context, productState.error); // Показываем виджет ошибки
-          }
-          // Если ошибки нет, но идет загрузка - показываем индикатор
-          else if (productState.isLoading) {
-            return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16.0),
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-            );
-          }
-          // Иначе (нет ошибки, не идет загрузка, но сюда дошли - например, hasReachedMax) - ничего не показываем
-          else {
-            return const SizedBox.shrink();
-          }
-        }
-
-        final product = products[index];
-        return ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: TSizes.md, vertical: TSizes.xs),
-          title: Text(product.skuName, style: const TextStyle(fontWeight: FontWeight.w500)),
-          subtitle: Text(
-            'ШК: ${product.barcode}\nОстаток: ${product.quantity} ${product.unit}',
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          trailing: Padding(
-            padding: const EdgeInsets.only(right: TSizes.sm),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  currencyFormat.format(product.price),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-              ],
+    return AnimationLimiter(
+      child: ListView.separated(
+        controller: _scrollController,
+        itemCount: products.length + (productState.isLoading && products.isNotEmpty ? 1 : 0),
+        padding: const EdgeInsets.only(bottom: 80, top: TSizes.sm),
+        separatorBuilder:
+            (context, index) => Divider(
+              height: 1,
+              thickness: 0.5,
+              indent: TSizes.md,
+              endIndent: TSizes.md,
+              color: Colors.grey.shade300,
             ),
-          ),
-          onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => ProductFormScreen(product: product)));
-          },
-          onLongPress: () => _showDeleteConfirmation(context, product),
-        );
-      },
+        itemBuilder: (context, index) {
+          if (index == products.length) {
+            // Если есть ошибка и мы не грузим следующую страницу
+            if (productState.error != null && !productState.isLoading) {
+              return _buildPaginationErrorWidget(context, productState.error); // Показываем виджет ошибки
+            }
+            // Если ошибки нет, но идет загрузка - показываем индикатор
+            else if (productState.isLoading) {
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16.0),
+                child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              );
+            }
+            // Иначе (нет ошибки, не идет загрузка, но сюда дошли - например, hasReachedMax) - ничего не показываем
+            else {
+              return const SizedBox.shrink();
+            }
+          }
+
+          final product = products[index];
+          return AnimationConfiguration.staggeredList(
+            position: index,
+            duration: const Duration(milliseconds: 375),
+            child: SlideAnimation(
+              verticalOffset: 50.0,
+              child: FadeInAnimation(
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: TSizes.md, vertical: TSizes.xs),
+                  title: Text(product.skuName, style: const TextStyle(fontWeight: FontWeight.w500)),
+                  subtitle: Text(
+                    'ШК: ${product.barcode}\nОстаток: ${product.quantity} ${product.unit}',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: Padding(
+                    padding: const EdgeInsets.only(right: TSizes.sm),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          currencyFormat.format(product.price),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => ProductFormScreen(product: product)));
+                  },
+                  onLongPress: () => _showDeleteConfirmation(context, product),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 

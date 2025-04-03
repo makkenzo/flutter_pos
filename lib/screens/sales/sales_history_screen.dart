@@ -9,6 +9,7 @@ import 'package:flutter_pos/utils/helpers/error_formatter.dart';
 import 'package:flutter_pos/utils/pdf_generator.dart';
 import 'package:flutter_pos/widgets/list_item_placeholder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
@@ -118,40 +119,54 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
       );
     }
 
-    return ListView.separated(
-      controller: _scrollController,
-      itemCount: sales.length + (salesState.isLoading && sales.isNotEmpty ? 1 : 0),
-      padding: const EdgeInsets.only(bottom: 16, top: 8),
-      separatorBuilder: (context, index) => Divider(height: 1, thickness: 0.5, indent: 72, color: Colors.grey.shade300),
-      itemBuilder: (context, index) {
-        if (index == sales.length) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16.0),
-            child: Center(child: CircularProgressIndicator()),
+    return AnimationLimiter(
+      child: ListView.separated(
+        controller: _scrollController,
+        itemCount: sales.length + (salesState.isLoading && sales.isNotEmpty ? 1 : 0),
+        padding: const EdgeInsets.only(bottom: 16, top: 8),
+        separatorBuilder:
+            (context, index) => Divider(height: 1, thickness: 0.5, indent: 72, color: Colors.grey.shade300),
+        itemBuilder: (context, index) {
+          if (index == sales.length) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.0),
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final sale = sales[index];
+          final paymentMethod = PaymentMethod.values.firstWhere(
+            (e) => e.name == sale.paymentMethod,
+            orElse: () => PaymentMethod.other,
           );
-        }
 
-        final sale = sales[index];
-        final paymentMethod = PaymentMethod.values.firstWhere(
-          (e) => e.name == sale.paymentMethod,
-          orElse: () => PaymentMethod.other,
-        );
-
-        return ListTile(
-          leading: CircleAvatar(child: Text(sale.orderId.length > 2 ? sale.orderId.substring(0, 2) : sale.orderId)),
-          title: Text('Заказ № ${sale.orderId}'),
-          subtitle: Text(
-            'Дата: ${dateFormat.format(sale.createdAt.toLocal())}\n'
-            'Сумма: ${currencyFormat.format(sale.totalAmount)}\n'
-            'Метод: ${paymentMethod.displayTitle}',
-          ),
-          isThreeLine: true,
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () {
-            _showSaleDetailsDialog(context, ref, sale, currencyFormat, dateFormat);
-          },
-        );
-      },
+          return AnimationConfiguration.staggeredList(
+            position: index,
+            duration: const Duration(milliseconds: 375),
+            child: SlideAnimation(
+              verticalOffset: 50.0,
+              child: FadeInAnimation(
+                child: ListTile(
+                  leading: CircleAvatar(
+                    child: Text(sale.orderId.length > 2 ? sale.orderId.substring(0, 2) : sale.orderId),
+                  ),
+                  title: Text('Заказ № ${sale.orderId}'),
+                  subtitle: Text(
+                    'Дата: ${dateFormat.format(sale.createdAt.toLocal())}\n'
+                    'Сумма: ${currencyFormat.format(sale.totalAmount)}\n'
+                    'Метод: ${paymentMethod.displayTitle}',
+                  ),
+                  isThreeLine: true,
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    _showSaleDetailsDialog(context, ref, sale, currencyFormat, dateFormat);
+                  },
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 
