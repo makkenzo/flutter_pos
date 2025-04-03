@@ -11,35 +11,18 @@ class CartNotifier extends StateNotifier<CartState> {
   CartNotifier() : super(CartState.initial());
 
   void addItem(Product product) {
-    // --- УБИРАЕМ ПРОВЕРКУ ОСТАТКОВ ЗДЕСЬ ---
-    // final existingItem = state.findItemByBarcode(product.barcode);
-    // final quantityInCart = existingItem?.quantity ?? 0;
-    // if (product.quantity <= quantityInCart) {
-    //   print('Cannot add...');
-    //   throw Exception('Недостаточно товара...');
-    // }
-    // --------------------------------------
-
-    // Ищем товар в корзине по barcode
-    final existingItem = state.findItemByBarcode(
-      product.barcode,
-    ); // Убедитесь, что этот метод есть в CartState
+    final existingItem = state.findItemByBarcode(product.barcode);
 
     if (existingItem != null) {
-      // Товар найден - увеличиваем количество
-      final updatedItem = existingItem.copyWith(
-        quantity: existingItem.quantity + 1,
-      );
+      final updatedItem = existingItem.copyWith(quantity: existingItem.quantity + 1);
       state = state.updateItem(updatedItem);
     } else {
-      // Товара нет - создаем новый CartItem
       final newItem = CartItem(
         productId: product.id,
-        barcode: product.barcode, // Сохраняем barcode
+        barcode: product.barcode,
         name: product.skuName,
         priceAtSale: product.price,
         quantity: 1,
-        // costPrice: product.costPrice, // Если вы решили хранить costPrice в CartItem
       );
       state = state.updateItem(newItem);
     }
@@ -61,6 +44,18 @@ class CartNotifier extends StateNotifier<CartState> {
         state = state.updateItem(updatedItem);
       } else {
         removeItem(sku);
+      }
+    }
+  }
+
+  void setQuantity(String barcode, int newQuantity) {
+    final item = state.findItemByBarcode(barcode);
+    if (item != null) {
+      if (newQuantity <= 0) {
+        removeItem(barcode);
+      } else {
+        final updatedItem = item.copyWith(quantity: newQuantity);
+        state = state.updateItem(updatedItem);
       }
     }
   }

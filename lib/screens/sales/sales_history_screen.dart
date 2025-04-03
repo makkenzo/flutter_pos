@@ -5,7 +5,7 @@ import 'package:flutter_pos/models/payment_method.dart';
 import 'package:flutter_pos/models/sale.dart';
 import 'package:flutter_pos/models/sale_item.dart';
 import 'package:flutter_pos/providers/sales_history_provider.dart';
-import 'package:flutter_pos/services/api_service.dart';
+import 'package:flutter_pos/utils/helpers/error_formatter.dart';
 import 'package:flutter_pos/utils/pdf_generator.dart';
 import 'package:flutter_pos/widgets/list_item_placeholder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -165,7 +165,7 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
             const Icon(Icons.cloud_off, color: Colors.red, size: 60), // Иконка ошибки сети/сервера
             const SizedBox(height: 16),
             Text(
-              'Ошибка загрузки товаров:\n${_formatErrorMessage(error)}',
+              'Ошибка: ${formatErrorMessage(error)}',
               textAlign: TextAlign.center,
               style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 15), // Чуть крупнее
             ),
@@ -261,10 +261,7 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                           loading: () => const Center(child: CircularProgressIndicator()),
                           error:
                               (error, stack) => Center(
-                                child: Text(
-                                  'Ошибка загрузки позиций:\n${_formatErrorMessage(error)}',
-                                  textAlign: TextAlign.center,
-                                ),
+                                child: Text('Ошибка: ${formatErrorMessage(error)}', textAlign: TextAlign.center),
                               ),
                         ),
                       ),
@@ -332,7 +329,7 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                             } else if (pdfError != null) {
                               scaffoldMessenger.showSnackBar(
                                 SnackBar(
-                                  content: Text('Ошибка при генерации чека:\n${_formatErrorMessage(pdfError)}'),
+                                  content: Text('Ошибка: ${formatErrorMessage(pdfError)}'),
                                   backgroundColor: Colors.red,
                                 ),
                               );
@@ -350,13 +347,5 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
         );
       },
     );
-  }
-
-  String _formatErrorMessage(Object? error) {
-    if (error == null) return 'Неизвестная ошибка';
-    if (error is HttpException) {
-      return error.message;
-    }
-    return error.toString();
   }
 }

@@ -7,7 +7,7 @@ import 'package:flutter_pos/providers/product_providers.dart';
 import 'package:flutter_pos/screens/pos/pos_screen.dart';
 import 'package:flutter_pos/screens/products/product_form_screen.dart';
 import 'package:flutter_pos/screens/sales/sales_history_screen.dart';
-import 'package:flutter_pos/services/api_service.dart';
+import 'package:flutter_pos/utils/helpers/error_formatter.dart';
 import 'package:flutter_pos/widgets/list_item_placeholder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -77,10 +77,10 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
   Widget build(BuildContext context) {
     final ProductListState productState = ref.watch(productListProvider);
     final List<Product> products = productState.products;
-    final bool isLoadingInitial = productState.isLoading && products.isEmpty && productState.error == null;
-    final bool isLoadingMore = productState.isLoading && products.isNotEmpty;
+
     final bool hasError = productState.error != null && !productState.isLoading;
-    final bool canLoadMore = !productState.isLoading && !productState.hasReachedMax;
+    final bool isLoadingInBackground = productState.isLoading && products.isNotEmpty;
+    final bool isLoadingInitial = productState.isLoading && products.isEmpty && productState.error == null;
 
     final currencyFormat = NumberFormat.currency(locale: 'ru_RU', symbol: '₸');
 
@@ -125,34 +125,38 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
             },
           ),
         ],
-
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(kToolbarHeight),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Поиск по названию, SKU, штрих-коду...',
-                prefixIcon: const Icon(Icons.search, size: 20),
-                suffixIcon:
-                    _searchController.text.isNotEmpty
-                        ? IconButton(
-                          icon: const Icon(Icons.clear, size: 20),
-                          tooltip: 'Очистить поиск',
-                          onPressed: () {
-                            _searchController.clear();
-                            _onSearchChanged('');
-                          },
-                        )
-                        : null,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide.none),
-                filled: true,
-                fillColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.6),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+          preferredSize: const Size.fromHeight(kToolbarHeight + 4),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Поиск по названию, SKU, штрих-коду...',
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    suffixIcon:
+                        _searchController.text.isNotEmpty
+                            ? IconButton(
+                              icon: const Icon(Icons.clear, size: 20),
+                              tooltip: 'Очистить поиск',
+                              onPressed: () {
+                                _searchController.clear();
+                                _onSearchChanged('');
+                              },
+                            )
+                            : null,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide.none),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.6),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  ),
+                  onChanged: _onSearchChanged,
+                ),
               ),
-              onChanged: _onSearchChanged,
-            ),
+              if (isLoadingInBackground) const LinearProgressIndicator(minHeight: 2),
+            ],
           ),
         ),
       ),
@@ -161,7 +165,6 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         child: Stack(
           children: [
             _buildBodyContent(context, productState, products, isLoadingInitial, currencyFormat),
-
             if (hasError && products.isEmpty) _buildErrorWidget(context, productState.error),
           ],
         ),
@@ -173,6 +176,34 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
           Navigator.push(context, MaterialPageRoute(builder: (_) => ProductFormScreen(product: null)));
         },
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  Widget _buildPaginationErrorWidget(BuildContext context, Object? error) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.warning_amber_rounded, color: Colors.orange[700], size: 32),
+          const SizedBox(height: 8),
+          Text(
+            'Не удалось загрузить еще:\n${formatErrorMessage(error)}', // Используем форматтер
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            // Используем TextButton для компактности
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('Повторить'),
+            onPressed: () {
+              // Вызываем загрузку СЛЕДУЮЩЕЙ страницы (не refresh всего списка)
+              ref.read(productListProvider.notifier).fetchNextPage();
+            },
+          ),
+        ],
       ),
     );
   }
@@ -231,10 +262,21 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
               Divider(height: 1, thickness: 0.5, indent: 16, endIndent: 16, color: Colors.grey.shade300),
       itemBuilder: (context, index) {
         if (index == products.length) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16.0),
-            child: Center(child: CircularProgressIndicator()),
-          );
+          // Если есть ошибка и мы не грузим следующую страницу
+          if (productState.error != null && !productState.isLoading) {
+            return _buildPaginationErrorWidget(context, productState.error); // Показываем виджет ошибки
+          }
+          // Если ошибки нет, но идет загрузка - показываем индикатор
+          else if (productState.isLoading) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.0),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            );
+          }
+          // Иначе (нет ошибки, не идет загрузка, но сюда дошли - например, hasReachedMax) - ничего не показываем
+          else {
+            return const SizedBox.shrink();
+          }
         }
 
         final product = products[index];
@@ -281,7 +323,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
             const Icon(Icons.cloud_off, color: Colors.red, size: 60), // Иконка ошибки сети/сервера
             const SizedBox(height: 16),
             Text(
-              'Ошибка загрузки товаров:\n${_formatErrorMessage(error)}',
+              'Ошибка: ${formatErrorMessage(error)}',
               textAlign: TextAlign.center,
               style: TextStyle(color: Theme.of(context).colorScheme.error, fontSize: 15), // Чуть крупнее
             ),
@@ -337,14 +379,5 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
         );
       },
     );
-  }
-
-  String _formatErrorMessage(Object? error) {
-    if (error == null) return 'Неизвестная ошибка';
-    if (error is HttpException) {
-      return error.message;
-    }
-
-    return error.toString();
   }
 }

@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_pos/main.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_pos/models/cart_item.dart';
 import 'package:flutter_pos/models/cart_state.dart';
 import 'package:flutter_pos/models/payment_method.dart';
 import 'package:flutter_pos/models/product.dart';
-import 'package:flutter_pos/models/sale.dart';
 import 'package:flutter_pos/providers/api_provider.dart';
 import 'package:flutter_pos/providers/auth_provider.dart';
 import 'package:flutter_pos/providers/cart_provider.dart';
@@ -12,12 +11,12 @@ import 'package:flutter_pos/providers/product_providers.dart';
 import 'package:flutter_pos/providers/sale_provider.dart';
 import 'package:flutter_pos/screens/products/product_form_screen.dart';
 import 'package:flutter_pos/services/api_service.dart';
+import 'package:flutter_pos/utils/constants/sizes.dart';
 import 'package:flutter_pos/widgets/barcode_scanner_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_pos/utils/helpers/error_formatter.dart';
 import 'package:intl/intl.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:flutter_pos/screens/products/product_list_screen.dart'
-    show Debouncer;
+import 'package:flutter_pos/screens/products/product_list_screen.dart' show Debouncer;
 
 class PosScreen extends ConsumerStatefulWidget {
   const PosScreen({super.key});
@@ -49,8 +48,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   }
 
   void _onProductScroll() {
-    if (_productScrollController.position.pixels >=
-        _productScrollController.position.maxScrollExtent - 300) {
+    if (_productScrollController.position.pixels >= _productScrollController.position.maxScrollExtent - 300) {
       ref.read(productListProvider.notifier).fetchNextPage();
     }
   }
@@ -74,12 +72,9 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     if (scannedValue != null && scannedValue.isNotEmpty && context.mounted) {
       await _processScannedBarcode(scannedValue);
     } else if (scannedValue == null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Сканирование отменено'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Сканирование отменено'), duration: Duration(seconds: 2)));
     }
   }
 
@@ -91,93 +86,57 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     scaffoldMessenger.showSnackBar(
       const SnackBar(
         content: Row(
-          children: [
-            CircularProgressIndicator(strokeWidth: 2),
-            SizedBox(width: 10),
-            Text("Поиск товара..."),
-          ],
+          children: [CircularProgressIndicator(strokeWidth: 2), SizedBox(width: 10), Text("Поиск товара...")],
         ),
         duration: Duration(seconds: 10),
       ),
     );
 
     try {
-      // 1. Запрос к API
       final apiService = ref.read(apiServiceProvider);
-      final Product? product = await apiService.getProductByBarcode(
-        barcodeValue,
-      );
+      final Product? product = await apiService.getProductByBarcode(barcodeValue);
 
-      if (!context.mounted) return; // Проверка после await
+      if (!context.mounted) return;
       scaffoldMessenger.hideCurrentSnackBar();
 
-      // 2. Анализ результата
       if (product == null) {
-        // 2.1 Товар НЕ НАЙДЕН глобально (404) -> Предлагаем создать
         print("Product not found globally. Navigating to create form.");
-        await _navigateToProductForm(
-          barcodeValue: barcodeValue,
-        ); // Передаем только штрих-код
+        await _navigateToProductForm(barcodeValue: barcodeValue);
       } else {
-        // 2.2 Товар НАЙДЕН глобально
-        print(
-          "Product found globally: ${product.skuName}, Quantity: ${product.quantity}",
-        );
+        print("Product found globally: ${product.skuName}, Quantity: ${product.quantity}");
         if (product.quantity > 0) {
-          // 2.2.1 Товар ЛОКАЛЬНЫЙ (quantity > 0) -> Добавляем в корзину
           print("Product is LOCAL. Adding to cart.");
           _addProductToCart(product);
         } else {
-          // 2.2.2 Товар ГЛОБАЛЬНЫЙ, но не локальный (quantity == 0 или отсутствует) -> Предлагаем создать
-          print(
-            "Product is GLOBAL-ONLY. Navigating to create form with prefill.",
-          );
-          await _navigateToProductForm(
-            product: product,
-          ); // Передаем найденный товар для предзаполнения
+          print("Product is GLOBAL-ONLY. Navigating to create form with prefill.");
+          await _navigateToProductForm(product: product);
         }
       }
     } on UnauthorizedException catch (e) {
-      // Ошибка авторизации при поиске товара
       print("Unauthorized during barcode processing: $e");
       if (!context.mounted) return;
       scaffoldMessenger.hideCurrentSnackBar();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text("Ошибка авторизации: $e"),
-          backgroundColor: Colors.red,
-        ),
-      );
-      ref.read(authProvider.notifier).logout(); // Выходим из системы
+      scaffoldMessenger.showSnackBar(SnackBar(content: Text("Ошибка авторизации: $e"), backgroundColor: Colors.red));
+      ref.read(authProvider.notifier).logout();
     } catch (e) {
-      // Другие ошибки API или сети
       print("Error processing barcode $barcodeValue: $e");
       if (!context.mounted) return;
       scaffoldMessenger.hideCurrentSnackBar();
       scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text("Ошибка при поиске товара: ${e.toString()}"),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text("Ошибка при поиске товара: ${e.toString()}"), backgroundColor: Colors.red),
       );
     }
   }
 
-  Future<void> _navigateToProductForm({
-    Product? product,
-    String? barcodeValue,
-  }) async {
+  Future<void> _navigateToProductForm({Product? product, String? barcodeValue}) async {
     if (!context.mounted) return;
 
-    // Создаем "черновик" продукта для передачи в форму
-    // Если есть глобальный продукт, берем данные из него
-    // Если нет, создаем пустой, но со штрих-кодом
     final Product productToEdit =
         product ??
         Product(
-          id: 0, // Новый ID будет присвоен сервером
-          skuCode: '', // Пустые поля, которые пользователь заполнит
-          barcode: barcodeValue ?? '', // Предзаполняем штрих-код
+          id: 0,
+          skuCode: '',
+          barcode: barcodeValue ?? '',
           unit: 'шт',
           skuName: '',
           status1c: '',
@@ -186,14 +145,12 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           subgroup: '',
           supplier: '',
           costPrice: 0.0,
-          price:
-              0.0, // Цена может быть из глобального товара product?.price ?? 0.0
-          quantity: 0, // Начальное количество нового товара
-          createdAt: DateTime.now(), // Даты будут установлены сервером
+          price: 0.0,
+          quantity: 0,
+          createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         );
 
-    // Показываем сообщение, что товар нужно создать
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -205,25 +162,16 @@ class _PosScreenState extends ConsumerState<PosScreen> {
       ),
     );
 
-    // Переходим на экран формы и ЖДЕМ результат (созданный продукт или null)
     final createdProduct = await Navigator.push<Product?>(
       context,
-      MaterialPageRoute(
-        builder:
-            (_) =>
-                ProductFormScreen(product: productToEdit), // Передаем черновик
-      ),
+      MaterialPageRoute(builder: (_) => ProductFormScreen(product: productToEdit)),
     );
 
-    // Если пользователь успешно создал товар и вернулся (createdProduct не null)
     if (createdProduct != null && context.mounted) {
-      print(
-        "Product created via form: ${createdProduct.skuName}. Adding to cart.",
-      );
-      _addProductToCart(createdProduct); // Добавляем СОЗДАННЫЙ товар в корзину
+      print("Product created via form: ${createdProduct.skuName}. Adding to cart.");
+      _addProductToCart(createdProduct);
     } else {
       print("Product creation cancelled or failed.");
-      // Можно показать сообщение об отмене, если нужно
     }
   }
 
@@ -254,7 +202,6 @@ class _PosScreenState extends ConsumerState<PosScreen> {
   Widget build(BuildContext context) {
     ref.listen<AsyncValue<String?>>(saleNotifierProvider, (_, state) {
       if (!state.isLoading && state.hasError) {
-        // Обработка ошибки (без изменений)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Ошибка оформления: ${state.error.toString()}'),
@@ -263,19 +210,16 @@ class _PosScreenState extends ConsumerState<PosScreen> {
           ),
         );
       } else if (state.hasValue && state.value != null) {
-        // --- Успешное оформление ---
-        final String orderId = state.value!; // Получаем orderId из состояния
+        final String orderId = state.value!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            // Используем orderId в сообщении
             content: Text('Продажа (Заказ № $orderId) успешно оформлена!'),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 3),
           ),
         );
-        // Сбрасываем состояние saleNotifier для следующей продажи
+
         ref.read(saleNotifierProvider.notifier).resetState();
-        // ---------------------------
       }
     });
 
@@ -285,8 +229,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final bool isTablet =
-            constraints.maxWidth >= PosScreen._tabletBreakpoint;
+        final bool isTablet = constraints.maxWidth >= PosScreen._tabletBreakpoint;
 
         return DefaultTabController(
           length: 2,
@@ -295,32 +238,13 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               return Scaffold(
                 appBar: AppBar(
                   title: const Text('Касса / Продажа'),
-                  actions: _buildAppBarActions(
-                    context,
-                    cartState,
-                    currencyFormat,
-                    isTablet,
-                    tabContext,
-                  ),
-                  bottom:
-                      isTablet
-                          ? null
-                          : _buildTabBar(context, cartState, currencyFormat),
+                  actions: _buildAppBarActions(context, cartState, currencyFormat, isTablet, tabContext),
+                  bottom: isTablet ? null : _buildTabBar(context, cartState, currencyFormat),
                 ),
                 body:
                     isTablet
-                        ? _buildTabletLayout(
-                          context,
-                          cartState,
-                          currencyFormat,
-                          saleState.isLoading,
-                        )
-                        : _buildMobileLayout(
-                          context,
-                          cartState,
-                          currencyFormat,
-                          saleState.isLoading,
-                        ),
+                        ? _buildTabletLayout(context, cartState, currencyFormat, saleState.isLoading)
+                        : _buildMobileLayout(context, cartState, currencyFormat, saleState.isLoading),
               );
             },
           ),
@@ -371,11 +295,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     ];
   }
 
-  PreferredSizeWidget _buildTabBar(
-    BuildContext context,
-    CartState cartState,
-    NumberFormat currencyFormat,
-  ) {
+  PreferredSizeWidget _buildTabBar(BuildContext context, CartState cartState, NumberFormat currencyFormat) {
     return TabBar(
       tabs: [
         const Tab(icon: Icon(Icons.inventory_2_outlined), text: 'Товары'),
@@ -423,24 +343,46 @@ class _PosScreenState extends ConsumerState<PosScreen> {
     return TabBarView(
       children: [
         _buildProductSelection(),
-        _CartViewWidget(
-          cartState: cartState,
-          currencyFormat: currencyFormat,
-          isCheckoutLoading: isCheckoutLoading,
-        ),
+        _CartViewWidget(cartState: cartState, currencyFormat: currencyFormat, isCheckoutLoading: isCheckoutLoading),
       ],
+    );
+  }
+
+  Widget _buildPaginationErrorWidget(BuildContext context, Object? error) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.warning_amber_rounded, color: Colors.orange[700], size: 32),
+          const SizedBox(height: 8),
+          Text(
+            'Не удалось загрузить еще:\n${formatErrorMessage(error)}', // Используем форматтер
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: 8),
+          TextButton.icon(
+            // Используем TextButton для компактности
+            icon: const Icon(Icons.refresh, size: 18),
+            label: const Text('Повторить'),
+            onPressed: () {
+              // Вызываем загрузку СЛЕДУЮЩЕЙ страницы (не refresh всего списка)
+              ref.read(productListProvider.notifier).fetchNextPage();
+            },
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildProductSelection() {
     final ProductListState productState = ref.watch(productListProvider);
     final List<Product> products = productState.products;
-    final bool isLoadingInitial =
-        productState.isLoading &&
-        products.isEmpty &&
-        productState.error == null;
+    final bool isLoadingInitial = productState.isLoading && products.isEmpty && productState.error == null;
     final bool isLoadingMore = productState.isLoading && products.isNotEmpty;
     final bool hasError = productState.error != null && !productState.isLoading;
+    final bool isLoadingInBackground = productState.isLoading && productState.products.isNotEmpty;
 
     return Column(
       children: [
@@ -461,23 +403,15 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         },
                       )
                       : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(30.0),
-                borderSide: BorderSide.none,
-              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(30.0), borderSide: BorderSide.none),
               filled: true,
-              fillColor: Theme.of(
-                context,
-              ).colorScheme.surfaceVariant.withOpacity(0.6),
-              contentPadding: const EdgeInsets.symmetric(
-                vertical: 0,
-                horizontal: 16,
-              ),
+              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
             ),
             onChanged: _onSearchChanged,
           ),
         ),
-
+        if (isLoadingInBackground) const LinearProgressIndicator(minHeight: 2),
         Expanded(
           child: RefreshIndicator(
             onRefresh: _handleProductsRefresh,
@@ -492,8 +426,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                 if (products.isEmpty && !productState.isLoading) {
                   return Center(
                     child: Text(
-                      productState.currentQuery != null &&
-                              productState.currentQuery!.isNotEmpty
+                      productState.currentQuery != null && productState.currentQuery!.isNotEmpty
                           ? 'Товары не найдены'
                           : 'Нет товаров для продажи',
                     ),
@@ -512,9 +445,21 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   itemCount: products.length + (isLoadingMore ? 1 : 0),
                   itemBuilder: (context, index) {
                     if (index == products.length) {
-                      return const Center(
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      );
+                      // Если есть ошибка и мы не грузим следующую страницу
+                      if (productState.error != null && !productState.isLoading) {
+                        return _buildPaginationErrorWidget(context, productState.error); // Показываем виджет ошибки
+                      }
+                      // Если ошибки нет, но идет загрузка - показываем индикатор
+                      else if (productState.isLoading) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16.0),
+                          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                        );
+                      }
+                      // Иначе (нет ошибки, не идет загрузка, но сюда дошли - например, hasReachedMax) - ничего не показываем
+                      else {
+                        return const SizedBox.shrink();
+                      }
                     }
                     final product = products[index];
                     return _buildProductTile(product);
@@ -549,10 +494,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
               children: [
                 Text(
                   product.skuName,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
+                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, fontSize: 15),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
@@ -561,10 +503,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
 
                 Text(
                   'Остаток: ${product.quantity} ${product.unit}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.disabledColor, // Менее заметный цвет
-                    fontSize: 11,
-                  ),
+                  style: theme.textTheme.bodySmall?.copyWith(color: theme.disabledColor, fontSize: 11),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 4),
@@ -572,11 +511,8 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                   currencyFormat.format(product.price),
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color:
-                        inStock
-                            ? theme.colorScheme.primary
-                            : theme.disabledColor,
-                    fontSize: 16, // Крупнее
+                    color: inStock ? theme.colorScheme.primary : theme.disabledColor,
+                    fontSize: 16,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -594,11 +530,7 @@ class _CartViewWidget extends ConsumerStatefulWidget {
   final NumberFormat currencyFormat;
   final bool isCheckoutLoading;
 
-  const _CartViewWidget({
-    required this.cartState,
-    required this.currencyFormat,
-    required this.isCheckoutLoading,
-  });
+  const _CartViewWidget({required this.cartState, required this.currencyFormat, required this.isCheckoutLoading});
 
   @override
   ConsumerState<_CartViewWidget> createState() => _CartViewWidgetState();
@@ -623,12 +555,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
                     itemBuilder: (context, index) {
                       final item = items[index];
 
-                      return _buildCartItemTile(
-                        context,
-                        ref,
-                        item,
-                        widget.currencyFormat,
-                      );
+                      return _buildCartItemTile(context, ref, item, widget.currencyFormat);
                     },
                   ),
         ),
@@ -641,10 +568,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
-                child: Text(
-                  'Метод оплаты:',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
+                child: Text('Метод оплаты:', style: Theme.of(context).textTheme.titleSmall),
               ),
 
               Column(
@@ -678,110 +602,62 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
                   Text('Итого:', style: Theme.of(context).textTheme.titleLarge),
                   Text(
                     widget.currencyFormat.format(widget.cartState.totalPrice),
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
 
               ElevatedButton.icon(
-                // --- СТИЛИ КНОПКИ ---
                 style: ElevatedButton.styleFrom(
-                  // Задаем основной цвет фона из темы
                   backgroundColor: Theme.of(context).colorScheme.primary,
-                  // Задаем основной цвет текста/иконки из темы
+
                   foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                  // Вертикальный отступ
+
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  // Стиль текста
-                  textStyle: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  // Скругление углов
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  // Минимальный размер (опционально, чтобы кнопка не была слишком маленькой)
-                  minimumSize: const Size(
-                    double.infinity,
-                    50,
-                  ), // Занимает всю ширину
+
+                  textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+
+                  minimumSize: const Size(double.infinity, 50),
                 ).copyWith(
-                  // Переопределяем цвет фона для состояния disabled (когда isLoading или корзина пуста)
-                  backgroundColor: MaterialStateProperty.resolveWith<Color?>((
-                    Set<MaterialState> states,
-                  ) {
+                  backgroundColor: MaterialStateProperty.resolveWith<Color?>((Set<MaterialState> states) {
                     if (states.contains(MaterialState.disabled)) {
-                      // Используем основной цвет, но с меньшей прозрачностью
-                      return Theme.of(
-                        context,
-                      ).colorScheme.primary.withOpacity(0.5);
+                      return Theme.of(context).colorScheme.primary.withOpacity(0.5);
                     }
-                    // Для всех остальных состояний (enabled, pressed, hovered)
-                    // возвращаем null, чтобы использовался backgroundColor из styleFrom
+
                     return null;
                   }),
-                  // Можно также изменить цвет текста/иконки для disabled, если нужно
-                  // foregroundColor: MaterialStateProperty.resolveWith<Color?>(
-                  //   (Set<MaterialState> states) {
-                  //     if (states.contains(MaterialState.disabled)) {
-                  //       return Theme.of(context).colorScheme.onPrimary.withOpacity(0.7);
-                  //     }
-                  //     return null; // Используем основной foregroundColor
-                  //   },
-                  // ),
                 ),
 
-                // --- ИКОНКА / ИНДИКАТОР ЗАГРУЗКИ ---
                 icon:
                     widget.isCheckoutLoading
                         ? Container(
-                          // Показываем индикатор, если isCheckoutLoading == true
-                          width: 20, // Задаем размер контейнера для индикатора
+                          width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
-                            strokeWidth: 2.5, // Толщина линии индикатора
-                            // Цвет индикатора должен контрастировать с фоном кнопки (primary)
-                            // Обычно onPrimary (белый) подходит
+                            strokeWidth: 2.5,
+
                             color: Theme.of(context).colorScheme.onPrimary,
                           ),
                         )
-                        : const Icon(
-                          Icons.payment,
-                          size: 22,
-                        ), // Иконка по умолчанию
-                // --- ТЕКСТ КНОПКИ ---
-                label: Text(
-                  widget.isCheckoutLoading
-                      ? 'ОФОРМЛЕНИЕ...'
-                      : 'ОФОРМИТЬ ПРОДАЖУ',
-                ),
+                        : const Icon(Icons.payment, size: 22),
 
-                // --- ОБРАБОТЧИК НАЖАТИЯ ---
-                // Кнопка заблокирована (onPressed = null), если:
-                // 1. Корзина пуста (items.isEmpty)
-                // 2. Идет процесс оформления (widget.isCheckoutLoading)
+                label: Text(widget.isCheckoutLoading ? 'ОФОРМЛЕНИЕ...' : 'ОФОРМИТЬ ПРОДАЖУ'),
+
                 onPressed:
                     items.isEmpty || widget.isCheckoutLoading
-                        ? null // Кнопка заблокирована
+                        ? null
                         : () {
-                          // Вызываем метод checkout из SaleNotifier, передавая выбранный метод оплаты
-                          ref
-                              .read(saleNotifierProvider.notifier)
-                              .checkout(_selectedPaymentMethod);
+                          ref.read(saleNotifierProvider.notifier).checkout(_selectedPaymentMethod);
                         },
               ),
 
               if (items.isNotEmpty && !widget.isCheckoutLoading) ...[
                 const SizedBox(height: 8),
                 TextButton.icon(
-                  icon: const Icon(
-                    Icons.remove_shopping_cart_outlined,
-                    size: 18,
-                  ),
+                  icon: const Icon(Icons.remove_shopping_cart_outlined, size: 18),
                   label: const Text('Очистить корзину'),
                   style: TextButton.styleFrom(foregroundColor: Colors.red),
                   onPressed: () => _showClearCartConfirmation(context, ref),
@@ -794,50 +670,168 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
     );
   }
 
-  Widget _buildCartItemTile(
-    BuildContext context,
-    WidgetRef ref,
-    CartItem item,
-    NumberFormat currencyFormat,
-  ) {
-    return ListTile(
-      title: Text(item.name),
-      subtitle: Text('${currencyFormat.format(item.priceAtSale)} / шт.'),
+  Future<void> _showQuantityEditDialog(CartItem item) async {
+    final TextEditingController qtyController = TextEditingController(text: item.quantity.toString());
+    int currentQty = item.quantity;
 
+    final int? newQuantity = await showDialog<int?>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: Text('Изменить количество', style: Theme.of(context).textTheme.titleLarge),
+              contentPadding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 0.0),
+              content: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  IconButton.filledTonal(
+                    icon: const Icon(Icons.remove),
+                    tooltip: 'Уменьшить',
+                    onPressed:
+                        currentQty <= 1
+                            ? null
+                            : () {
+                              if (currentQty > 1) {
+                                setStateDialog(() {
+                                  currentQty--;
+                                  qtyController.text = currentQty.toString();
+                                });
+                              }
+                            },
+                  ),
+                  const SizedBox(width: TSizes.sm),
+
+                  Expanded(
+                    child: SizedBox(
+                      width: 60,
+                      child: TextFormField(
+                        controller: qtyController,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(vertical: TSizes.xs),
+                        ),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+
+                        onChanged: (value) {
+                          setStateDialog(() {
+                            currentQty = int.tryParse(value) ?? currentQty;
+                          });
+                        },
+
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        validator: (value) {
+                          final intValue = int.tryParse(value ?? '');
+                          if (intValue == null || intValue <= 0) {
+                            return '!\u003e0';
+                          }
+
+                          return null;
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: TSizes.sm),
+
+                  IconButton.filledTonal(
+                    icon: const Icon(Icons.add),
+                    tooltip: 'Увеличить',
+                    onPressed: () {
+                      setStateDialog(() {
+                        currentQty++;
+                        qtyController.text = currentQty.toString();
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actionsPadding: const EdgeInsets.symmetric(horizontal: TSizes.sm, vertical: TSizes.xs),
+              actions: <Widget>[
+                TextButton(child: const Text('Отмена'), onPressed: () => Navigator.of(dialogContext).pop(null)),
+
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: qtyController,
+                  builder: (context, value, child) {
+                    final isValid = (int.tryParse(value.text) ?? 0) > 0;
+                    return TextButton(
+                      onPressed:
+                          !isValid
+                              ? null
+                              : () {
+                                final qty = int.tryParse(qtyController.text);
+                                if (qty != null && qty > 0) {
+                                  Navigator.of(dialogContext).pop(qty);
+                                } else {
+                                  Navigator.of(dialogContext).pop(null);
+                                }
+                              },
+                      child: const Text('Сохранить'),
+                    );
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (newQuantity != null && newQuantity > 0) {
+      ref.read(cartProvider.notifier).setQuantity(item.barcode, newQuantity);
+    } else if (newQuantity != null && newQuantity <= 0) {
+      ref.read(cartProvider.notifier).removeItem(item.barcode);
+    }
+  }
+
+  Widget _buildCartItemTile(BuildContext context, WidgetRef ref, CartItem item, NumberFormat currencyFormat) {
+    final theme = Theme.of(context);
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: TSizes.sm, vertical: 0),
+      dense: true,
+      title: Text(item.name, style: theme.textTheme.bodyMedium),
+      subtitle: Text('${currencyFormat.format(item.priceAtSale)} / шт.', style: theme.textTheme.bodySmall),
       leading: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            icon: const Icon(Icons.remove_circle_outline, color: Colors.orange),
-            iconSize: 20,
-            padding: EdgeInsets.zero,
+            icon: const Icon(Icons.remove_circle_outline),
+            color: Colors.orange.shade700,
+            iconSize: 24,
+            padding: EdgeInsets.all(4),
             constraints: const BoxConstraints(),
             tooltip: 'Уменьшить',
             onPressed: () {
               ref.read(cartProvider.notifier).decrementQuantity(item.barcode);
             },
           ),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0),
-            child: Text(
-              item.quantity.toString(),
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          InkWell(
+            onTap: () => _showQuantityEditDialog(item),
+            borderRadius: BorderRadius.circular(TSizes.borderRadiusSm),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+              child: Text(
+                item.quantity.toString(),
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: Colors.green),
-            iconSize: 20,
-            padding: EdgeInsets.zero,
+            icon: const Icon(Icons.add_circle_outline),
+            color: Colors.green.shade700,
+            iconSize: 24,
+            padding: const EdgeInsets.all(4),
             constraints: const BoxConstraints(),
             tooltip: 'Увеличить',
-            onPressed: () {
-              ref.read(cartProvider.notifier).incrementQuantity(item.barcode);
-            },
+            onPressed: () => ref.read(cartProvider.notifier).incrementQuantity(item.barcode),
           ),
         ],
       ),
-
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -846,19 +840,18 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
             child: Text(
               currencyFormat.format(item.itemTotal),
               textAlign: TextAlign.end,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
-
+          const SizedBox(width: TSizes.xs),
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.red),
-            iconSize: 20,
-            padding: EdgeInsets.zero,
+            icon: const Icon(Icons.delete_outline),
+            color: theme.colorScheme.error,
+            iconSize: 22,
+            padding: const EdgeInsets.all(4),
             constraints: const BoxConstraints(),
             tooltip: 'Удалить из корзины',
-            onPressed: () {
-              ref.read(cartProvider.notifier).removeItem(item.barcode);
-            },
+            onPressed: () => ref.read(cartProvider.notifier).removeItem(item.barcode),
           ),
         ],
       ),
@@ -873,10 +866,7 @@ class _CartViewWidgetState extends ConsumerState<_CartViewWidget> {
           title: const Text('Очистить корзину?'),
           content: const Text('Вы уверены...?'),
           actions: <Widget>[
-            TextButton(
-              child: const Text('Отмена'),
-              onPressed: () => Navigator.of(ctx).pop(),
-            ),
+            TextButton(child: const Text('Отмена'), onPressed: () => Navigator.of(ctx).pop()),
             TextButton(
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Очистить'),
