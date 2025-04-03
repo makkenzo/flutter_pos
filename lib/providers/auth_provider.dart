@@ -66,7 +66,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       try {
         await _storageService.deleteToken();
-      } catch (storageError) {}
+      } catch (_) {}
     } finally {
       _ref.read(productListProvider.notifier).reset();
       _ref.read(salesHistoryProvider.notifier).reset();

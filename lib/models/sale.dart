@@ -31,12 +31,7 @@ class Sale {
     var itemsList = <SaleItem>[];
     if (json['items'] != null && json['items'] is List) {
       itemsList =
-          (json['items'] as List)
-              .map(
-                (itemJson) =>
-                    SaleItem.fromJson(itemJson as Map<String, dynamic>),
-              )
-              .toList();
+          (json['items'] as List).map((itemJson) => SaleItem.fromJson(itemJson as Map<String, dynamic>)).toList();
     }
 
     try {
@@ -53,32 +48,16 @@ class Sale {
         ),
         // ---------------------------------------------------
         // Даты с безопасным парсингом
-        createdAt:
-            DateTime.tryParse(json['created_at'] as String? ?? '') ??
-            DateTime(1970), // Ранняя дата по умолчанию
-        updatedAt:
-            DateTime.tryParse(json['updated_at'] as String? ?? '') ??
-            DateTime(1970),
+        createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime(1970), // Ранняя дата по умолчанию
+        updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? '') ?? DateTime(1970),
         items: itemsList,
       );
-    } catch (e, stackTrace) {
-      print("!!! Error parsing Sale from JSON: $e");
-      print("Stack trace: $stackTrace");
-      print(
-        "Problematic JSON for Sale: ${json.keys}",
-      ); // Печатаем ключи, т.к. весь JSON может быть большим
+    } catch (e) {
       rethrow;
     }
   }
 
-  Map<String, dynamic> toJsonForCreation(
-    List<Map<String, dynamic>> itemsJsonList,
-    String paymentMethodName,
-  ) {
-    return {
-      'total_amount': totalAmount,
-      'payment_method': paymentMethodName,
-      'items': itemsJsonList,
-    };
+  Map<String, dynamic> toJsonForCreation(List<Map<String, dynamic>> itemsJsonList, String paymentMethodName) {
+    return {'total_amount': totalAmount, 'payment_method': paymentMethodName, 'items': itemsJsonList};
   }
 }

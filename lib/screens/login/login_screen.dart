@@ -98,7 +98,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       prefixIcon: const Icon(Icons.person_outline),
                       border: const OutlineInputBorder(),
                       filled: true,
-                      fillColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.04),
+                      fillColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.04),
                     ),
                     keyboardType: TextInputType.text,
                     textInputAction: TextInputAction.next,
@@ -113,7 +113,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       prefixIcon: const Icon(Icons.lock_outline),
                       border: const OutlineInputBorder(),
                       filled: true,
-                      fillColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.04),
+                      fillColor: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.04),
                       suffixIcon: IconButton(
                         icon: Icon(_isPasswordVisible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
                         tooltip: _isPasswordVisible ? 'Скрыть пароль' : 'Показать пароль',

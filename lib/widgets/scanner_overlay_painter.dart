@@ -20,13 +20,9 @@ class ScannerOverlayPainter extends CustomPainter {
           ),
         );
 
-    final backgroundPaint = Paint()..color = Colors.black.withOpacity(0.5);
+    final backgroundPaint = Paint()..color = Colors.black.withValues(alpha: 0.5);
 
-    final backgroundPathCutout = Path.combine(
-      PathOperation.difference,
-      backgroundPath,
-      cutoutPath,
-    );
+    final backgroundPathCutout = Path.combine(PathOperation.difference, backgroundPath, cutoutPath);
     canvas.drawPath(backgroundPathCutout, backgroundPaint);
 
     final borderPaint =

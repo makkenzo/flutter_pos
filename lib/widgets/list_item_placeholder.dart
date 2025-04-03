@@ -89,7 +89,7 @@ class InventoryListItemPlaceholder extends StatelessWidget {
           Container(height: 10, width: MediaQuery.of(context).size.width * 0.4, color: color),
         ],
       ),
-      trailing: Icon(Icons.edit_outlined, color: color.withOpacity(0.5)),
+      trailing: Icon(Icons.edit_outlined, color: color.withValues(alpha: 0.5)),
     );
   }
 }

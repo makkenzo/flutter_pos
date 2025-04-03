@@ -2,7 +2,7 @@ class ApiConstants {
   ApiConstants._();
 
   // ЗАМЕНИТЕ НА ВАШ РЕАЛЬНЫЙ URL
-  static const String baseUrl = "https://pos-api.makkenzo.com";
+  static const String baseUrl = "https://pos-api.metalogic.kz";
 
   // Эндпоинты (примеры)
   static const String loginEndpoint = "/auth/token";

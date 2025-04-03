@@ -3,10 +3,9 @@ import 'package:flutter_pos/providers/auth_provider.dart';
 import 'package:flutter_pos/services/api_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final loginProvider =
-    StateNotifierProvider.autoDispose<LoginNotifier, AsyncValue<void>>((ref) {
-      return LoginNotifier(ref);
-    });
+final loginProvider = StateNotifierProvider.autoDispose<LoginNotifier, AsyncValue<void>>((ref) {
+  return LoginNotifier(ref);
+});
 
 class LoginNotifier extends StateNotifier<AsyncValue<void>> {
   final Ref _ref;
@@ -29,12 +28,8 @@ class LoginNotifier extends StateNotifier<AsyncValue<void>> {
 
       state = const AsyncValue.data(null);
     } on UnauthorizedException catch (error, stackTrace) {
-      print('LoginNotifier: Unauthorized error - $error');
-
       state = AsyncValue.error(error, stackTrace);
     } catch (error, stackTrace) {
-      print('LoginNotifier: General error - $error');
-
       state = AsyncValue.error(error, stackTrace);
     }
   }

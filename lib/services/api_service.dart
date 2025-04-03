@@ -48,8 +48,6 @@ class PaginatedResponse<T> {
         content: items,
       );
     } catch (e) {
-      print("!!! Error parsing PaginatedResponse from JSON: $e");
-      print("Problematic JSON keys: ${json.keys}");
       rethrow;
     }
   }
@@ -91,7 +89,6 @@ class ApiService {
 
   Future<String> login(String username, String password) async {
     final Uri loginUri = Uri.parse('${ApiConstants.baseUrl}${ApiConstants.loginEndpoint}');
-    print('Attempting login to: $loginUri');
 
     try {
       final response = await http
@@ -102,8 +99,6 @@ class ApiService {
           )
           .timeout(const Duration(seconds: 15));
 
-      print('Login response status: ${response.statusCode}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         try {
           final body = jsonDecode(response.body);
@@ -111,27 +106,22 @@ class ApiService {
 
           if (token != null && token.isNotEmpty) {
             await _storageService.saveToken(token);
-            print('Login successful, token saved.');
+
             return token;
           } else {
-            print('Login error: Token not found in response body.');
             throw Exception('Не удалось получить токен из ответа сервера.');
           }
         } catch (e) {
-          print('Login error parsing response: $e');
           throw Exception('Ошибка обработки ответа сервера при входе.');
         }
       } else {
         throw _handleHttpError(response, 'Login');
       }
-    } on SocketException catch (e) {
-      print('Login network error: $e');
+    } on SocketException catch (_) {
       throw Exception('Ошибка сети. Проверьте подключение к интернету.');
-    } on http.ClientException catch (e) {
-      print('Login client error: $e');
+    } on http.ClientException catch (_) {
       throw Exception('Ошибка клиента при подключении к серверу.');
     } catch (e) {
-      print('Login unexpected error: $e');
       if (e is Exception) {
         rethrow;
       }
@@ -142,10 +132,7 @@ class ApiService {
   Future<void> logout() async {
     try {
       await _storageService.deleteToken();
-      print('Logged out, token deleted.');
-    } catch (e) {
-      print("Error during logout (token deletion): $e");
-    }
+    } catch (_) {}
   }
 
   Future<PaginatedResponse<Product>> getProducts({
@@ -175,14 +162,10 @@ class ApiService {
 
     final Uri productsUri = Uri.parse('${ApiConstants.baseUrl}/products/local/').replace(queryParameters: queryParams);
 
-    print('Fetching products from: $productsUri');
-
     try {
       final response = await http
           .get(productsUri, headers: await _getAuthHeaders(includeContentType: false))
           .timeout(const Duration(seconds: 60));
-
-      print('Get products response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         try {
@@ -190,20 +173,16 @@ class ApiService {
 
           return PaginatedResponse.fromJson(body, Product.fromJson);
         } catch (e) {
-          print('Get products error parsing response: $e');
           throw Exception('Ошибка обработки ответа сервера при получении продуктов.');
         }
       } else {
         throw _handleHttpError(response, 'Get products');
       }
-    } on SocketException catch (e) {
-      print('Get products network error: $e');
+    } on SocketException catch (_) {
       throw Exception('Ошибка сети при получении продуктов.');
-    } on http.ClientException catch (e) {
-      print('Get products client error: $e');
+    } on http.ClientException catch (_) {
       throw Exception('Ошибка клиента при получении продуктов.');
     } catch (e) {
-      print('Get products unexpected error: $e');
       if (e is Exception) rethrow;
       throw Exception('Неизвестная ошибка при получении продуктов: ${e.runtimeType}');
     }
@@ -212,36 +191,28 @@ class ApiService {
   Future<Product?> getProductByBarcode(String barcode) async {
     if (barcode.isEmpty) return null;
     final Uri productUri = Uri.parse('${ApiConstants.baseUrl}/products/global/by-barcode/$barcode');
-    print('Fetching product by barcode: $productUri');
 
     try {
       final response = await http
           .get(productUri, headers: await _getAuthHeaders(includeContentType: false))
           .timeout(const Duration(seconds: 10));
 
-      print('Get product by barcode status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         try {
           return Product.fromJson(jsonDecode(utf8.decode(response.bodyBytes)));
         } catch (e) {
-          print('Get product by barcode error parsing response: $e');
           throw Exception('Ошибка обработки ответа сервера.');
         }
       } else if (response.statusCode == 404) {
-        print('Product with barcode $barcode not found.');
         return null;
       } else {
         throw _handleHttpError(response, 'Get product by barcode $barcode');
       }
-    } on SocketException catch (e) {
-      print('Get product by barcode network error: $e');
+    } on SocketException catch (_) {
       throw Exception('Ошибка сети.');
-    } on http.ClientException catch (e) {
-      print('Get product by barcode client error: $e');
+    } on http.ClientException catch (_) {
       throw Exception('Ошибка клиента.');
     } catch (e) {
-      print('Get product by barcode unexpected error: $e');
       if (e is Exception) rethrow;
       throw Exception('Неизвестная ошибка: ${e.runtimeType}');
     }
@@ -249,34 +220,27 @@ class ApiService {
 
   Future<Product> addProduct(Product product) async {
     final Uri productsUri = Uri.parse('${ApiConstants.baseUrl}/products/local/');
-    print('Adding product to: $productsUri');
 
     try {
       final response = await http
           .post(productsUri, headers: await _getAuthHeaders(), body: jsonEncode(product.toJsonForCreate()))
           .timeout(const Duration(seconds: 15));
 
-      print('Add product response status: ${response.statusCode}');
-
       if (response.statusCode == 201) {
         try {
           final body = jsonDecode(utf8.decode(response.bodyBytes));
           return Product.fromJson(body);
         } catch (e) {
-          print('Add product error parsing response: $e');
           throw Exception('Ошибка обработки ответа сервера после добавления продукта.');
         }
       } else {
         throw _handleHttpError(response, 'Add product');
       }
-    } on SocketException catch (e) {
-      print('Add product network error: $e');
+    } on SocketException catch (_) {
       throw Exception('Ошибка сети при добавлении продукта.');
-    } on http.ClientException catch (e) {
-      print('Add product client error: $e');
+    } on http.ClientException catch (_) {
       throw Exception('Ошибка клиента при добавлении продукта.');
     } catch (e) {
-      print('Add product unexpected error: $e');
       if (e is Exception) rethrow;
       throw Exception('Неизвестная ошибка при добавлении продукта: ${e.runtimeType}');
     }
@@ -284,34 +248,27 @@ class ApiService {
 
   Future<Product> updateProduct(int productId, Product product) async {
     final Uri productUri = Uri.parse('${ApiConstants.baseUrl}/products/local/$productId');
-    print('Updating product at: $productUri');
 
     try {
       final response = await http
           .put(productUri, headers: await _getAuthHeaders(), body: jsonEncode(product.toJsonForUpdate()))
           .timeout(const Duration(seconds: 15));
 
-      print('Update product response status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         try {
           final body = jsonDecode(utf8.decode(response.bodyBytes));
           return Product.fromJson(body);
         } catch (e) {
-          print('Update product error parsing response: $e');
           throw Exception('Ошибка обработки ответа сервера после обновления продукта.');
         }
       } else {
         throw _handleHttpError(response, 'Update product $productId');
       }
-    } on SocketException catch (e) {
-      print('Update product network error: $e');
+    } on SocketException catch (_) {
       throw Exception('Ошибка сети при обновлении продукта.');
-    } on http.ClientException catch (e) {
-      print('Update product client error: $e');
+    } on http.ClientException catch (_) {
       throw Exception('Ошибка клиента при обновлении продукта.');
     } catch (e) {
-      print('Update product unexpected error: $e');
       if (e is Exception) rethrow;
       throw Exception('Неизвестная ошибка при обновлении продукта: ${e.runtimeType}');
     }
@@ -319,26 +276,20 @@ class ApiService {
 
   Future<void> deleteProduct(int productId) async {
     final Uri productUri = Uri.parse('${ApiConstants.baseUrl}/products/local/$productId');
-    print('Deleting product at: $productUri');
 
     try {
       final response = await http
           .delete(productUri, headers: await _getAuthHeaders(includeContentType: false))
           .timeout(const Duration(seconds: 15));
 
-      print('Delete product response status: ${response.statusCode}');
-
       if (response.statusCode != 200 && response.statusCode != 204) {
         throw _handleHttpError(response, 'Delete product $productId');
       }
-    } on SocketException catch (e) {
-      print('Delete product network error: $e');
+    } on SocketException catch (_) {
       throw Exception('Ошибка сети при удалении продукта.');
-    } on http.ClientException catch (e) {
-      print('Delete product client error: $e');
+    } on http.ClientException catch (_) {
       throw Exception('Ошибка клиента при удалении продукта.');
     } catch (e) {
-      print('Delete product unexpected error: $e');
       if (e is Exception) rethrow;
       throw Exception('Неизвестная ошибка при удалении продукта: ${e.runtimeType}');
     }
@@ -368,32 +319,25 @@ class ApiService {
             // 'total': item.itemTotal, // Если нужно
           };
         }).toList();
-    print('Sale request body (items): ${jsonEncode(itemsBody)}');
 
     try {
       final response = await http
           .post(salesUri, headers: await _getAuthHeaders(), body: jsonEncode(itemsBody))
           .timeout(const Duration(seconds: 25));
 
-      print('Create sale response status: ${response.statusCode}');
-
       if (response.statusCode == 201 || response.statusCode == 200) {
         try {
           final body = jsonDecode(utf8.decode(response.bodyBytes));
           final orderId = body['order_id'] as String?;
           if (orderId != null && orderId.isNotEmpty) {
-            print('Sale created successfully. Order ID: $orderId');
             return orderId;
           } else {
-            print('Create sale error: order_id not found in response body.');
             throw Exception('Не удалось получить ID заказа из ответа сервера.');
           }
         } catch (e) {
-          print('Create sale error parsing response: $e');
           throw Exception('Ошибка обработки ответа сервера после создания продажи.');
         }
       } else if (response.statusCode == 422) {
-        print('Create sale failed with 422: ${response.body}');
         String detailMessage = 'Ошибка валидации данных при создании продажи.';
         try {
           final body = jsonDecode(utf8.decode(response.bodyBytes));
@@ -410,32 +354,30 @@ class ApiService {
       } else {
         throw _handleHttpError(response, 'Create sale');
       }
-    } on SocketException catch (e) {
-      print('Create sale network error: $e');
+    } on SocketException catch (_) {
       throw Exception('Ошибка сети при создании продажи.');
-    } on http.ClientException catch (e) {
-      print('Create sale client error: $e');
+    } on http.ClientException catch (_) {
       throw Exception('Ошибка клиента при создании продажи.');
     } catch (e) {
-      print('Create sale unexpected error: $e');
       if (e is Exception) rethrow;
       throw Exception('Неизвестная ошибка при создании продажи: ${e.runtimeType}');
     }
   }
 
   Future<PaginatedResponse<Sale>> getSalesHistory({int skip = 0, int limit = 20, String sortOrder = 'desc'}) async {
-    final queryParams = <String, String>{'skip': skip.toString(), 'limit': limit.toString(), 'sort_order': sortOrder};
+    final queryParams = <String, String>{
+      'skip': skip.toString(),
+      'limit': limit.toString(),
+      'sort_order': sortOrder,
+      'sort_by': 'order_id',
+    };
 
     final Uri salesUri = Uri.parse('${ApiConstants.baseUrl}/sales/').replace(queryParameters: queryParams);
-
-    print('Fetching sales history from: $salesUri');
 
     try {
       final response = await http
           .get(salesUri, headers: await _getAuthHeaders(includeContentType: false))
           .timeout(const Duration(seconds: 20));
-
-      print('Get sales history response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         try {
@@ -443,20 +385,16 @@ class ApiService {
 
           return PaginatedResponse.fromJson(body, Sale.fromJson);
         } catch (e) {
-          print('Get sales history error parsing response: $e');
           throw Exception('Ошибка обработки ответа сервера при получении истории продаж.');
         }
       } else {
         throw _handleHttpError(response, 'Get sales history');
       }
-    } on SocketException catch (e) {
-      print('Get sales history network error: $e');
+    } on SocketException catch (_) {
       throw Exception('Ошибка сети при получении истории продаж.');
-    } on http.ClientException catch (e) {
-      print('Get sales history client error: $e');
+    } on http.ClientException catch (_) {
       throw Exception('Ошибка клиента при получении истории продаж.');
     } catch (e) {
-      print('Get sales history unexpected error: $e');
       if (e is Exception) rethrow;
       throw Exception('Неизвестная ошибка при получении истории продаж: ${e.runtimeType}');
     }
@@ -464,14 +402,11 @@ class ApiService {
 
   Future<List<SaleItem>> getSaleItems(String orderId) async {
     final Uri saleItemsUri = Uri.parse('${ApiConstants.baseUrl}/sales/$orderId');
-    print('Fetching sale items for order: $saleItemsUri');
 
     try {
       final response = await http
           .get(saleItemsUri, headers: await _getAuthHeaders(includeContentType: false))
           .timeout(const Duration(seconds: 15));
-
-      print('Get sale items response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         try {
@@ -485,20 +420,16 @@ class ApiService {
             throw Exception('Неожиданный формат ответа для деталей продажи.');
           }
         } catch (e) {
-          print('Get sale items error parsing response: $e');
           throw Exception('Ошибка обработки ответа сервера при получении деталей продажи.');
         }
       } else {
         throw _handleHttpError(response, 'Get sale items for order $orderId');
       }
-    } on SocketException catch (e) {
-      print('Get sale items network error: $e');
+    } on SocketException catch (_) {
       throw Exception('Ошибка сети при получении деталей продажи.');
-    } on http.ClientException catch (e) {
-      print('Get sale items client error: $e');
+    } on http.ClientException catch (_) {
       throw Exception('Ошибка клиента при получении деталей продажи.');
     } catch (e) {
-      print('Get sale items unexpected error: $e');
       if (e is Exception) rethrow;
       throw Exception('Неизвестная ошибка при получении деталей продажи: ${e.runtimeType}');
     }
@@ -518,34 +449,27 @@ class ApiService {
 
     // ЗАМЕНИТЕ на ваш эндпоинт
     final Uri analyticsUri = Uri.parse('${ApiConstants.baseUrl}/analytics/sales').replace(queryParameters: queryParams);
-    print('Fetching sales analytics from: $analyticsUri');
 
     try {
       final response = await http
           .get(analyticsUri, headers: await _getAuthHeaders(includeContentType: false))
           .timeout(const Duration(seconds: 30)); // Таймаут побольше для аналитики
 
-      print('Get sales analytics status: ${response.statusCode}');
-
       if (response.statusCode == 200) {
         try {
           final body = jsonDecode(utf8.decode(response.bodyBytes));
           return SalesAnalytics.fromJson(body);
-        } catch (e, stackTrace) {
-          print('Get sales analytics error parsing response: $e\n$stackTrace');
+        } catch (e) {
           throw Exception('Ошибка обработки ответа сервера при получении аналитики.');
         }
       } else {
         throw _handleHttpError(response, 'Get sales analytics');
       }
-    } on SocketException catch (e) {
-      print('Get sales analytics network error: $e');
+    } on SocketException catch (_) {
       throw Exception('Ошибка сети при получении аналитики.');
-    } on TimeoutException catch (e) {
-      print('Get sales analytics timeout error: $e');
+    } on TimeoutException catch (_) {
       throw Exception('Превышено время ожидания ответа от сервера.');
     } catch (e) {
-      print('Get sales analytics unexpected error: $e');
       if (e is Exception) rethrow;
       throw Exception('Неизвестная ошибка при получении аналитики: ${e.runtimeType}');
     }

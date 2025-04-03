@@ -1,6 +1,3 @@
-import 'package:meta/meta.dart';
-
-@immutable
 class CartItem {
   final int productId;
   final String barcode;
@@ -31,14 +28,7 @@ class CartItem {
 
   double get itemTotal => priceAtSale * quantity;
 
-  CartItem copyWith({
-    int? productId,
-    String? barcode,
-    String? name,
-    double? priceAtSale,
-    String? unit,
-    int? quantity,
-  }) {
+  CartItem copyWith({int? productId, String? barcode, String? name, double? priceAtSale, String? unit, int? quantity}) {
     return CartItem(
       productId: productId ?? this.productId,
       barcode: barcode ?? this.barcode,
@@ -51,20 +41,12 @@ class CartItem {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is CartItem &&
-          runtimeType == other.runtimeType &&
-          barcode == other.barcode;
+      identical(this, other) || other is CartItem && runtimeType == other.runtimeType && barcode == other.barcode;
 
   @override
   int get hashCode => barcode.hashCode;
 
   Map<String, dynamic> toJsonForSaleCreation() {
-    return {
-      'product_id': productId,
-      'quantity': quantity,
-      'price': priceAtSale,
-      'cost_price': 0,
-    };
+    return {'product_id': productId, 'quantity': quantity, 'price': priceAtSale, 'cost_price': 0};
   }
 }

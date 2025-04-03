@@ -211,7 +211,7 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
 
     try {
       saleItems = await ref.read(saleDetailsProvider(sale.orderId).future);
-    } catch (e) {}
+    } catch (_) {}
 
     if (!context.mounted) return;
 

@@ -59,11 +59,9 @@ class AnalyticsNotifier extends StateNotifier<AnalyticsState> {
       // Успех: обновляем данные
       state = state.copyWith(analyticsData: AsyncValue.data(data));
     } on UnauthorizedException catch (e, st) {
-      print("Analytics fetch failed: Unauthorized $e");
       state = state.copyWith(analyticsData: AsyncValue.error(e, st));
       _ref.read(authProvider.notifier).logout(); // Выход
     } catch (e, st) {
-      print("Analytics fetch failed: $e");
       state = state.copyWith(analyticsData: AsyncValue.error(e, st));
     }
   }

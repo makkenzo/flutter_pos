@@ -43,7 +43,6 @@ class MyApp extends ConsumerWidget {
   }
 
   Widget _buildHome(AuthStatus status) {
-    print("Building home for status: $status");
     switch (status) {
       case AuthStatus.authenticated:
         return const DashboardScreen();
