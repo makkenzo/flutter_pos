@@ -1,8 +1,8 @@
-// lib/screens/product_form_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_pos/models/product.dart';
 import 'package:flutter_pos/providers/product_providers.dart';
+import 'package:flutter_pos/utils/constants/sizes.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class ProductFormScreen extends ConsumerStatefulWidget {
@@ -128,20 +128,15 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
 
     if (context.mounted) {
       if (resultProduct != null) {
-        // \u003c--- Проверяем результат здесь
-        // Показываем сообщение об успехе
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_isEditing ? 'Товар успешно обновлен' : 'Товар успешно добавлен'),
             backgroundColor: Colors.green,
           ),
         );
-        // Возвращаемся на предыдущий экран и передаем созданный/обновленный продукт
+
         Navigator.of(context).pop(resultProduct);
       }
-      // Если resultProduct == null, значит произошла ошибка.
-      // Сообщение об ошибке уже должно было быть показано
-      // с помощью ref.listen в методе build этого экрана.
     }
   }
 
@@ -161,6 +156,8 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
       }
     });
 
+    final theme = Theme.of(context);
+
     final formAsyncState = ref.watch(productFormNotifierProvider);
     final isLoading = formAsyncState.isLoading;
 
@@ -177,7 +174,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
           IconButton(
             icon:
                 isLoading
-                    ? Container(
+                    ? SizedBox(
                       width: 20,
                       height: 20,
                       child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
@@ -190,17 +187,23 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(TSizes.md),
         child: Form(
           key: _formKey,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           child: ListView(
             children: [
+              Text('Основные данные', style: theme.textTheme.titleLarge),
+
+              const SizedBox(height: TSizes.spaceBtwItems / 2),
+
               _buildTextField(
                 controller: _skuNameController,
                 labelText: 'Название товара *',
                 icon: Icons.label_outline,
                 validator: _validateNotEmpty,
                 enabled: !isLoading,
+                textInputAction: TextInputAction.next,
               ),
 
               _buildTextField(
@@ -209,6 +212,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 icon: Icons.barcode_reader,
                 validator: _validateNotEmpty,
                 enabled: !isLoading,
+                textInputAction: TextInputAction.next,
               ),
               _buildTextField(
                 controller: _unitController,
@@ -216,6 +220,25 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 icon: Icons.square_foot_outlined,
                 validator: _validateNotEmpty,
                 enabled: !isLoading,
+                textInputAction: TextInputAction.next,
+              ),
+
+              const SizedBox(height: TSizes.spaceBtwSections),
+
+              Text('Цена и Количество', style: theme.textTheme.titleLarge),
+
+              const SizedBox(height: TSizes.spaceBtwItems / 2),
+
+              _buildTextField(
+                controller: _priceController,
+                labelText: 'Цена продажи *',
+                icon: Icons.sell_outlined,
+                prefixText: '₸ ',
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
+                validator: _validatePositiveNumber,
+                enabled: !isLoading,
+                textInputAction: TextInputAction.next,
               ),
               _buildTextField(
                 controller: _costPriceController,
@@ -226,16 +249,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
                 validator: _validatePositiveNumber,
                 enabled: !isLoading,
-              ),
-              _buildTextField(
-                controller: _priceController,
-                labelText: 'Цена продажи *',
-                icon: Icons.sell_outlined,
-                prefixText: '₸ ',
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))],
-                validator: _validatePositiveNumber,
-                enabled: !isLoading,
+                textInputAction: TextInputAction.next,
               ),
               _buildTextField(
                 controller: _quantityController,
@@ -245,11 +259,14 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 validator: _validateNonNegativeInteger,
                 enabled: !isLoading,
+                textInputAction: TextInputAction.next,
               ),
 
-              const Padding(padding: EdgeInsets.symmetric(vertical: 16.0), child: Divider(thickness: 1)),
-              Text('Дополнительная информация (необязательно)', style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: 10),
+              const SizedBox(height: TSizes.spaceBtwSections),
+
+              Text('Дополнительная информация (необязательно)', style: Theme.of(context).textTheme.titleLarge),
+
+              const SizedBox(height: TSizes.spaceBtwItems / 2),
 
               _buildTextField(
                 controller: _skuCodeController,
@@ -257,6 +274,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 icon: Icons.inventory_2_outlined,
                 validator: _validateNotEmpty,
                 enabled: !isLoading,
+                textInputAction: TextInputAction.next,
               ),
 
               _buildTextField(
@@ -264,24 +282,28 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 labelText: 'Поставщик',
                 icon: Icons.local_shipping_outlined,
                 enabled: !isLoading,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => isLoading ? null : _saveForm(),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: TSizes.spaceBtwSections),
+
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ).copyWith(
-                  backgroundColor: MaterialStateProperty.resolveWith<Color?>((Set<MaterialState> states) {
-                    if (states.contains(MaterialState.disabled))
-                      return Theme.of(context).colorScheme.primary.withOpacity(0.5);
+                  backgroundColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+                    if (states.contains(WidgetState.disabled)) {
+                      return Theme.of(context).colorScheme.primary.withValues(alpha: 0.5);
+                    }
                     return null;
                   }),
                 ),
                 icon:
                     isLoading
-                        ? Container(
+                        ? SizedBox(
                           width: 20,
                           height: 20,
                           child: const CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
@@ -290,7 +312,7 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
                 label: Text(isLoading ? 'СОХРАНЕНИЕ...' : 'СОХРАНИТЬ'),
                 onPressed: isLoading ? null : _saveForm,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: TSizes.defaultSpace),
             ],
           ),
         ),
@@ -299,28 +321,23 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
   }
 
   Future<void> _confirmAndDelete() async {
-    // Убедимся, что есть товар для удаления
     final productToDelete = widget.product;
     if (productToDelete == null) return;
 
-    // Спрашиваем подтверждение у пользователя
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (BuildContext ctx) {
         return AlertDialog(
           title: const Text('Подтвердить удаление'),
           content: Text(
-            'Вы уверены, что хотите удалить товар \"${productToDelete.skuName}\"?\nЭто действие нельзя будет отменить.',
+            'Вы уверены, что хотите удалить товар "${productToDelete.skuName}"?\nЭто действие нельзя будет отменить.',
           ),
           actions: <Widget>[
-            TextButton(
-              child: const Text('Отмена'),
-              onPressed: () => Navigator.of(ctx).pop(false), // Возвращаем false
-            ),
+            TextButton(child: const Text('Отмена'), onPressed: () => Navigator.of(ctx).pop(false)),
             TextButton(
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Удалить'),
-              onPressed: () => Navigator.of(ctx).pop(true), // Возвращаем true
+              onPressed: () => Navigator.of(ctx).pop(true),
             ),
           ],
         );
@@ -328,20 +345,12 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     );
 
     if (confirm == true) {
-      // Вызываем метод удаления из Notifier'а
-      // Notifier сам установит isLoading, и кнопка заблокируется
       final bool success = await ref.read(productFormNotifierProvider.notifier).deleteProduct(productToDelete.id);
 
-      // Если виджет еще активен после await
       if (context.mounted) {
         if (success) {
-          // Сообщение об успехе покажет ProductListScreen после обновления
-          // Просто закрываем экран редактирования
           Navigator.of(context).pop();
-          // Можно добавить задержку и показать SnackBar здесь, но лучше
-          // положиться на обновление списка на предыдущем экране.
         }
-        // Если success == false, то ошибку покажет ref.listen в build
       }
     }
   }
@@ -356,24 +365,32 @@ class _ProductFormScreenState extends ConsumerState<ProductFormScreen> {
     String? Function(String?)? validator,
     int? maxLines = 1,
     bool enabled = true,
+    // --- НОВЫЕ ПАРАМЕТРЫ ---
+    TextInputAction? textInputAction,
+    void Function(String)? onFieldSubmitted, // Функция для вызова при нажатии "Готово"/"Enter"
+    // ----------------------
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      padding: const EdgeInsets.symmetric(vertical: TSizes.sm / 2), // Уменьшим вертикальный отступ
       child: TextFormField(
         controller: controller,
         decoration: InputDecoration(
           labelText: labelText,
-          prefixIcon: icon != null ? Icon(icon, size: 20) : null,
+          prefixIcon: icon != null ? Icon(icon, size: TSizes.iconSm) : null, // Используем константу
           prefixText: prefixText,
-          border: const OutlineInputBorder(),
-          isDense: true,
+          // border: const OutlineInputBorder(), // Убрали, т.к. тема задает Underline
+          // isDense: true, // Тема уже задает isDense и contentPadding
         ),
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
         validator: validator,
         maxLines: maxLines,
         enabled: enabled,
-        style: TextStyle(color: enabled ? null : Colors.grey[700]),
+        style: TextStyle(color: enabled ? null : Theme.of(context).disabledColor), // Используем цвет из темы
+        // --- ИСПОЛЬЗОВАНИЕ НОВЫХ ПАРАМЕТРОВ ---
+        textInputAction: textInputAction,
+        onFieldSubmitted: onFieldSubmitted,
+        // -------------------------------------
       ),
     );
   }
