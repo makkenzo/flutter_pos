@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:flutter_pos/models/app_settings.dart';
 import 'package:flutter_pos/models/payment_method.dart';
 import 'package:flutter_pos/models/sale.dart';
 import 'package:flutter_pos/models/sale_item.dart';
@@ -17,7 +18,7 @@ Future<pw.Font> _loadPdfFont(String fontAssetPath) async {
   }
 }
 
-Future<Uint8List> generateReceiptPdf(Sale sale, List<SaleItem> items) async {
+Future<Uint8List> generateReceiptPdf(Sale sale, List<SaleItem> items, AppSettings settings) async {
   final pw.Document pdf = pw.Document();
   final currencyFormat = NumberFormat.currency(locale: 'ru_RU', symbol: '₸');
   final dateFormat = DateFormat('dd.MM.yyyy HH:mm:ss', 'ru_RU');
@@ -38,9 +39,9 @@ Future<Uint8List> generateReceiptPdf(Sale sale, List<SaleItem> items) async {
   final pw.TextStyle headerStyle = pw.TextStyle(font: boldFont, fontSize: 14);
   final pw.TextStyle totalStyle = pw.TextStyle(font: boldFont, fontSize: 11);
 
-  const String storeName = 'SAMPLE SHOP';
-  const String storeAddress = 'SAMPLE ADDRESS';
-  const String storePhone = '+7 (777) 123-45-67';
+  final String storeName = settings.storeName;
+  final String storeAddress = settings.storeAddress;
+  final String storePhone = settings.storePhone;
 
   final paymentMethod = PaymentMethod.values.firstWhere(
     (e) => e.name == sale.paymentMethod,

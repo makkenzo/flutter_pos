@@ -146,7 +146,7 @@ class _ProductListScreenState extends ConsumerState<ProductListScreen> {
                               tooltip: 'Очистить поиск',
                               onPressed: () {
                                 _searchController.clear();
-                                _onSearchChanged('');
+                                ref.read(productListProvider.notifier).search('');
                               },
                             )
                             : null,

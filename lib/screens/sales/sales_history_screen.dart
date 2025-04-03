@@ -5,6 +5,7 @@ import 'package:flutter_pos/models/payment_method.dart';
 import 'package:flutter_pos/models/sale.dart';
 import 'package:flutter_pos/models/sale_item.dart';
 import 'package:flutter_pos/providers/sales_history_provider.dart';
+import 'package:flutter_pos/providers/settings_provider.dart';
 import 'package:flutter_pos/utils/helpers/error_formatter.dart';
 import 'package:flutter_pos/utils/pdf_generator.dart';
 import 'package:flutter_pos/widgets/list_item_placeholder.dart';
@@ -208,6 +209,7 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
     DateFormat dateFormat,
   ) async {
     List<SaleItem>? saleItems;
+    final settings = ref.read(settingsProvider);
 
     try {
       saleItems = await ref.read(saleDetailsProvider(sale.orderId).future);
@@ -313,7 +315,7 @@ class _SalesHistoryScreenState extends ConsumerState<SalesHistoryScreen> {
                             Object? pdfError;
 
                             try {
-                              pdfBytes = await generateReceiptPdf(sale, saleItems!);
+                              pdfBytes = await generateReceiptPdf(sale, saleItems!, settings);
                             } catch (e) {
                               pdfError = e;
                             }

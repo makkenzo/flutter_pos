@@ -5,6 +5,7 @@ import 'package:flutter_pos/screens/inventory_screen.dart';
 import 'package:flutter_pos/screens/pos/pos_screen.dart';
 import 'package:flutter_pos/screens/products/product_list_screen.dart';
 import 'package:flutter_pos/screens/sales/sales_history_screen.dart';
+import 'package:flutter_pos/screens/settings_screen.dart';
 import 'package:flutter_pos/utils/constants/sizes.dart';
 import 'package:flutter_pos/widgets/dashboard_item.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,6 +48,11 @@ class DashboardScreen extends ConsumerWidget {
               context,
               MaterialPageRoute(builder: (_) => const AnalyticsScreen()),
             ), // \u003c--- Переход
+      ),
+      _DashboardItemData(
+        icon: Icons.settings_outlined, // Иконка настроек
+        title: 'Настройки',
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())), // Переход
       ),
     ];
 

@@ -52,6 +52,7 @@ final productListProvider = StateNotifierProvider<ProductListNotifier, ProductLi
 class ProductListNotifier extends StateNotifier<ProductListState> {
   final Ref _ref;
   final int _limit = 20;
+  bool _isFetching = false;
 
   ProductListNotifier(this._ref) : super(const ProductListState()) {
     _ref.listen<AuthState>(authProvider, (previous, next) {
@@ -78,13 +79,24 @@ class ProductListNotifier extends StateNotifier<ProductListState> {
   }
 
   Future<void> fetchProducts({bool isRefresh = false, String? query}) async {
-    if (state.isLoading || (state.hasReachedMax && !isRefresh && query == state.currentQuery)) return;
+    if (_isFetching || (state.hasReachedMax && !isRefresh)) return;
 
-    state = state.copyWith(isLoading: true, error: null, clearError: true);
+    final bool isNewSearchOrRefresh = isRefresh || query != state.currentQuery;
 
-    int pageToFetch = isRefresh || query != state.currentQuery ? 0 : state.currentPage;
+    if (state.hasReachedMax && !isNewSearchOrRefresh) return;
+
+    _isFetching = true;
+
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+      clearError: true,
+      hasReachedMax: isNewSearchOrRefresh ? false : state.hasReachedMax,
+    );
+
+    int pageToFetch = state.currentPage;
     int skip = pageToFetch * _limit;
-    String? fetchQuery = query ?? state.currentQuery;
+    String? fetchQuery = query ?? (isNewSearchOrRefresh ? null : state.currentQuery);
 
     try {
       final apiService = _ref.read(apiServiceProvider);

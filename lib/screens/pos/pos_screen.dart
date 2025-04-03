@@ -391,7 +391,7 @@ class _PosScreenState extends ConsumerState<PosScreen> {
                         icon: const Icon(Icons.clear, size: 20),
                         onPressed: () {
                           _searchController.clear();
-                          _onSearchChanged('');
+                          ref.read(productListProvider.notifier).search('');
                         },
                       )
                       : null,

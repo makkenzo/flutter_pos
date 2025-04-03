@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_pos/models/app_settings.dart';
 import 'package:flutter_pos/providers/auth_provider.dart';
+import 'package:flutter_pos/providers/settings_provider.dart';
 import 'package:flutter_pos/screens/dashboard_screen.dart';
 import 'package:flutter_pos/screens/login/login_screen.dart';
 
@@ -24,10 +26,11 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final AuthState authState = ref.watch(authProvider);
+    final AppSettings settings = ref.watch(settingsProvider);
 
     return MaterialApp(
       title: 'Mini-POS',
-      themeMode: ThemeMode.system,
+      themeMode: settings.themeMode,
       theme: TAppTheme.lightTheme,
       darkTheme: TAppTheme.darkTheme,
       locale: const Locale('ru', 'RU'),
