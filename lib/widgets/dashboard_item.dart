@@ -11,17 +11,22 @@ class DashboardGridItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Card(
-      clipBehavior: Clip.antiAlias,
+
+    return Material(
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      borderRadius: BorderRadius.circular(TSizes.borderRadiusLg),
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(TSizes.borderRadiusLg),
+        splashColor: theme.colorScheme.primary.withValues(alpha: 0.1), // Цвет всплеска
+        highlightColor: theme.colorScheme.primary.withValues(alpha: 0.05),
         child: Padding(
           padding: const EdgeInsets.all(TSizes.sm),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(icon, size: TSizes.iconLg * 1.8, color: theme.colorScheme.primary),
+              Icon(icon, size: TSizes.iconLg * 1.5, color: theme.colorScheme.primary),
               const SizedBox(height: TSizes.spaceBtwItems / 2),
               Text(
                 title,
